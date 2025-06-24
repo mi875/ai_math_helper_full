@@ -25,7 +25,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     _displayNameController.text = '';
     _gradeController.text = '';
     _selectedGradeKey = null;
-    
+
     // Load profile data after build
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(profileModelProvider.notifier).loadProfile();
@@ -47,27 +47,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final user = authState.user;
     final profile = profileState.profile;
 
-    // Update controllers with profile data
-    if (_displayNameController.text.isEmpty && profile?.displayName != null) {
-      _displayNameController.text = profile!.displayName!;
-    }
-    
-    // Update grade selection based on profile data
-    final currentGrade = profile?.grade;
-    if (currentGrade != null && _selectedGradeKey != currentGrade) {
-      _selectedGradeKey = currentGrade;
-      // Find the display name for the grade key
-      final gradeOption = profileState.gradeOptions
-          .where((g) => g.key == currentGrade)
-          .firstOrNull;
-      if (gradeOption != null) {
-        _gradeController.text = gradeOption.displayName;
-      }
-    } else if (currentGrade == null && _selectedGradeKey != null) {
-      // Clear selection if profile has no grade
-      _selectedGradeKey = null;
-      _gradeController.text = '';
-    }
+    // Update grade selection when profile data changes
 
     return Scaffold(
       body: Column(
@@ -176,7 +156,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 border: Border.all(
                                   color: Theme.of(
                                     context,
-                                  ).colorScheme.outline.withOpacity(0.3),
+                                  ).colorScheme.outline.withValues(alpha: 0.3),
                                 ),
                                 borderRadius: BorderRadius.circular(8),
                               ),
@@ -223,23 +203,26 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 border: OutlineInputBorder(),
                                 hintText: 'Select your grade level',
                               ),
-                              items: profileState.gradeOptions
-                                  .map(
-                                    (grade) => DropdownMenuItem(
-                                      value: grade.key,
-                                      child: Text(grade.displayName),
-                                    ),
-                                  )
-                                  .toList(),
+                              items:
+                                  profileState.gradeOptions
+                                      .map(
+                                        (grade) => DropdownMenuItem(
+                                          value: grade.key,
+                                          child: Text(grade.displayName),
+                                        ),
+                                      )
+                                      .toList(),
                               onChanged: (value) {
                                 if (value != null) {
                                   setState(() {
                                     _selectedGradeKey = value;
-                                    final selectedGrade = profileState.gradeOptions
-                                        .where((g) => g.key == value)
-                                        .firstOrNull;
+                                    final selectedGrade =
+                                        profileState.gradeOptions
+                                            .where((g) => g.key == value)
+                                            .firstOrNull;
                                     if (selectedGrade != null) {
-                                      _gradeController.text = selectedGrade.displayName;
+                                      _gradeController.text =
+                                          selectedGrade.displayName;
                                     }
                                   });
                                 }
@@ -256,18 +239,25 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 border: Border.all(
                                   color: Theme.of(
                                     context,
-                                  ).colorScheme.outline.withOpacity(0.3),
+                                  ).colorScheme.outline.withValues(alpha: 0.3),
                                 ),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
-                                _selectedGradeKey == null || _gradeController.text.isEmpty
+                                _selectedGradeKey == null ||
+                                        _gradeController.text.isEmpty
                                     ? 'No grade selected'
                                     : _gradeController.text,
-                                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                  color: _selectedGradeKey == null
-                                      ? Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.6)
-                                      : null,
+                                style: Theme.of(
+                                  context,
+                                ).textTheme.bodyLarge?.copyWith(
+                                  color:
+                                      _selectedGradeKey == null
+                                          ? Theme.of(context)
+                                              .colorScheme
+                                              .onSurfaceVariant
+                                              .withValues(alpha: 0.6)
+                                          : null,
                                 ),
                               ),
                             ),
@@ -307,13 +297,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               horizontal: 16,
                             ),
                             decoration: BoxDecoration(
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.surfaceVariant.withOpacity(0.3),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest
+                                  .withValues(alpha: 0.3),
                               border: Border.all(
                                 color: Theme.of(
                                   context,
-                                ).colorScheme.outline.withOpacity(0.3),
+                                ).colorScheme.outline.withValues(alpha: 0.3),
                               ),
                               borderRadius: BorderRadius.circular(8),
                             ),
@@ -362,21 +353,30 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text('Remaining:', style: Theme.of(context).textTheme.bodyMedium),
+                                Text(
+                                  'Remaining:',
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                ),
                                 Text(
                                   '${profile.remainingTokens} / ${profile.totalTokens}',
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.bodyMedium?.copyWith(
                                     fontWeight: FontWeight.bold,
-                                    color: profile.remainingTokens < 100
-                                        ? Colors.orange
-                                        : Theme.of(context).colorScheme.primary,
+                                    color:
+                                        profile.remainingTokens < 100
+                                            ? Colors.orange
+                                            : Theme.of(
+                                              context,
+                                            ).colorScheme.primary,
                                   ),
                                 ),
                               ],
                             ),
                             const SizedBox(height: 8),
                             LinearProgressIndicator(
-                              value: profile.remainingTokens / profile.totalTokens,
+                              value:
+                                  profile.remainingTokens / profile.totalTokens,
                               backgroundColor: Colors.grey.shade300,
                             ),
                           ],
@@ -413,9 +413,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   Future<void> _saveProfile() async {
     final profileNotifier = ref.read(profileModelProvider.notifier);
-    
+
     final success = await profileNotifier.updateProfile(
-      displayName: _displayNameController.text.isNotEmpty ? _displayNameController.text : null,
+      displayName:
+          _displayNameController.text.isNotEmpty
+              ? _displayNameController.text
+              : null,
       grade: _selectedGradeKey,
     );
 
@@ -423,7 +426,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       setState(() {
         _isEditing = false;
       });
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -436,7 +439,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(ref.read(profileModelProvider).errorMessage ?? 'Failed to update profile'),
+            content: Text(
+              ref.read(profileModelProvider).errorMessage ??
+                  'Failed to update profile',
+            ),
             behavior: SnackBarBehavior.floating,
             backgroundColor: Colors.red,
           ),
@@ -448,38 +454,43 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Future<void> _changeProfilePicture() async {
     showModalBottomSheet(
       context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.camera_alt),
-              title: const Text('Take Photo'),
-              onTap: () {
-                Navigator.pop(context);
-                _pickImage(ImageSource.camera);
-              },
+      builder:
+          (context) => SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.camera_alt),
+                  title: const Text('Take Photo'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickImage(ImageSource.camera);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.photo_library),
+                  title: const Text('Choose from Gallery'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickImage(ImageSource.gallery);
+                  },
+                ),
+                if (ref.read(profileModelProvider).profile?.profileImageUrl !=
+                    null)
+                  ListTile(
+                    leading: const Icon(Icons.delete, color: Colors.red),
+                    title: const Text(
+                      'Remove Photo',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _deleteProfileImage();
+                    },
+                  ),
+              ],
             ),
-            ListTile(
-              leading: const Icon(Icons.photo_library),
-              title: const Text('Choose from Gallery'),
-              onTap: () {
-                Navigator.pop(context);
-                _pickImage(ImageSource.gallery);
-              },
-            ),
-            if (ref.read(profileModelProvider).profile?.profileImageUrl != null)
-              ListTile(
-                leading: const Icon(Icons.delete, color: Colors.red),
-                title: const Text('Remove Photo', style: TextStyle(color: Colors.red)),
-                onTap: () {
-                  Navigator.pop(context);
-                  _deleteProfileImage();
-                },
-              ),
-          ],
-        ),
-      ),
+          ),
     );
   }
 
@@ -492,11 +503,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         maxWidth: 1024,
         maxHeight: 1024,
       );
-      
+
       if (image != null) {
         final profileNotifier = ref.read(profileModelProvider.notifier);
         final success = await profileNotifier.uploadProfileImage(image);
-        
+
         if (success && mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -507,7 +518,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         } else if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(ref.read(profileModelProvider).errorMessage ?? 'Failed to update profile image'),
+              content: Text(
+                ref.read(profileModelProvider).errorMessage ??
+                    'Failed to update profile image',
+              ),
               behavior: SnackBarBehavior.floating,
               backgroundColor: Colors.red,
             ),
@@ -530,7 +544,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Future<void> _deleteProfileImage() async {
     final profileNotifier = ref.read(profileModelProvider.notifier);
     final success = await profileNotifier.deleteProfileImage();
-    
+
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -541,7 +555,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(ref.read(profileModelProvider).errorMessage ?? 'Failed to remove profile image'),
+          content: Text(
+            ref.read(profileModelProvider).errorMessage ??
+                'Failed to remove profile image',
+          ),
           behavior: SnackBarBehavior.floating,
           backgroundColor: Colors.red,
         ),

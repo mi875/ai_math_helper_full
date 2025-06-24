@@ -1,14 +1,35 @@
-import { Context } from 'hono';
+import type { Context } from 'hono';
 import { db } from '../db/client.js';
-import { notebooks, mathProblems, aiFeedbacks } from '../db/schema.js';
+import { notebooks, mathProblems, aiFeedbacks, users } from '../db/schema.js';
 import { eq, and, desc } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
+
+// Helper function to ensure user exists in database
+async function ensureUserExists(user: { uid: string; email?: string }) {
+  const existingUser = await db
+    .select()
+    .from(users)
+    .where(eq(users.uid, user.uid))
+    .limit(1);
+
+  if (existingUser.length === 0) {
+    await db
+      .insert(users)
+      .values({
+        uid: user.uid,
+        email: user.email || '',
+        displayName: null,
+        grade: null,
+      });
+  }
+}
 
 export const notebookController = {
   // Get all notebooks for a user
   async getNotebooks(c: Context) {
     try {
-      const userId = c.get('userId');
+      const user = c.get('user');
+      const userId = user.uid;
       
       const userNotebooks = await db
         .select()
@@ -32,7 +53,8 @@ export const notebookController = {
   // Get a specific notebook with its problems
   async getNotebook(c: Context) {
     try {
-      const userId = c.get('userId');
+      const user = c.get('user');
+      const userId = user.uid;
       const notebookUid = c.req.param('uid');
 
       const notebook = await db
@@ -83,8 +105,12 @@ export const notebookController = {
   // Create a new notebook
   async createNotebook(c: Context) {
     try {
-      const userId = c.get('userId');
+      const user = c.get('user');
+      const userId = user.uid;
       const { title, description, coverColor } = await c.req.json();
+
+      // Ensure user exists in database
+      await ensureUserExists(user);
 
       const newNotebook = await db
         .insert(notebooks)
@@ -113,7 +139,8 @@ export const notebookController = {
   // Update a notebook
   async updateNotebook(c: Context) {
     try {
-      const userId = c.get('userId');
+      const user = c.get('user');
+      const userId = user.uid;
       const notebookUid = c.req.param('uid');
       const { title, description, coverColor } = await c.req.json();
 
@@ -154,7 +181,8 @@ export const notebookController = {
   // Delete a notebook
   async deleteNotebook(c: Context) {
     try {
-      const userId = c.get('userId');
+      const user = c.get('user');
+      const userId = user.uid;
       const notebookUid = c.req.param('uid');
 
       // First find the notebook to get its internal ID
@@ -215,7 +243,8 @@ export const notebookController = {
   // Create a math problem in a notebook
   async createProblem(c: Context) {
     try {
-      const userId = c.get('userId');
+      const user = c.get('user');
+      const userId = user.uid;
       const notebookUid = c.req.param('uid');
       const { title, description, imagePaths, scribbleData, tags } = await c.req.json();
 
@@ -270,7 +299,8 @@ export const notebookController = {
   // Update a math problem
   async updateProblem(c: Context) {
     try {
-      const userId = c.get('userId');
+      const user = c.get('user');
+      const userId = user.uid;
       const problemUid = c.req.param('problemUid');
       const { title, description, imagePaths, scribbleData, status, tags } = await c.req.json();
 
@@ -318,7 +348,8 @@ export const notebookController = {
   // Delete a math problem
   async deleteProblem(c: Context) {
     try {
-      const userId = c.get('userId');
+      const user = c.get('user');
+      const userId = user.uid;
       const problemUid = c.req.param('problemUid');
 
       // First find the problem to get its internal ID
@@ -367,7 +398,8 @@ export const notebookController = {
   // Get AI feedbacks for a problem
   async getProblemFeedbacks(c: Context) {
     try {
-      const userId = c.get('userId');
+      const user = c.get('user');
+      const userId = user.uid;
       const problemUid = c.req.param('problemUid');
 
       // First find the problem

@@ -129,11 +129,11 @@ export const updateUserProfile = async (c: Context) => {
 export const getAvailableGrades = async (c: Context) => {
   try {
     const grades = gradeEnum.map(grade => ({
-      value: grade,
-      label: gradeDisplayNames[grade as keyof typeof gradeDisplayNames],
-      category: grade.startsWith('junior_high') ? 'Junior High School (中学校)' :
-                grade.startsWith('senior_high') ? 'Senior High School (高等学校)' :
-                'Kosen (高等専門学校)'
+      key: grade,
+      displayName: gradeDisplayNames[grade as keyof typeof gradeDisplayNames],
+      category: grade.startsWith('junior_high') ? 'junior_high' :
+                grade.startsWith('senior_high') ? 'senior_high' :
+                'kosen'
     }));
     
     return c.json({ success: true, grades });

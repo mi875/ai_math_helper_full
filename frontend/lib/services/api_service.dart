@@ -65,6 +65,7 @@ class ApiService {
       final body = <String, dynamic>{};
       if (displayName != null) body['displayName'] = displayName;
       if (grade != null) body['grade'] = grade;
+      debugPrint('Updating profile with body: $body');
 
       final response = await http.put(
         Uri.parse('$baseUrl/api/user/profile'),
@@ -202,29 +203,6 @@ class ApiService {
     }
   }
 
-  // Grade Options
-  static Future<List<Map<String, dynamic>>?> getGradeOptions() async {
-    try {
-      final token = await _getAuthToken();
-      if (token == null) return null;
-
-      final response = await http.get(
-        Uri.parse('$baseUrl/api/user/grades'),
-        headers: _getHeaders(token: token),
-      );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(utf8.decode(response.bodyBytes));
-        return List<Map<String, dynamic>>.from(data['grades']);
-      } else {
-        debugPrint('Failed to get grade options: ${response.statusCode}');
-        return null;
-      }
-    } catch (e) {
-      debugPrint('Error getting grade options: $e');
-      return null;
-    }
-  }
 
   // Token Management
   static Future<Map<String, dynamic>?> getTokenStatus() async {

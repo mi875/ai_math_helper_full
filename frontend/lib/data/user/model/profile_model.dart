@@ -54,20 +54,8 @@ class ProfileModel extends _$ProfileModel {
   }
 
   Future<void> loadGradeOptions() async {
-    try {
-      final gradeData = await ApiService.getGradeOptions();
-      if (gradeData != null) {
-        final grades = gradeData.map((g) => GradeOption.fromJson(g)).toList();
-        state = state.copyWith(gradeOptions: grades);
-      } else {
-        // Use default grade options if API fails
-        state = state.copyWith(gradeOptions: _getDefaultGradeOptions());
-      }
-    } catch (e) {
-      debugPrint('Error loading grade options: $e');
-      // Use default grade options if API fails
-      state = state.copyWith(gradeOptions: _getDefaultGradeOptions());
-    }
+    // Always use default grade options for now
+    state = state.copyWith(gradeOptions: _getDefaultGradeOptions());
   }
 
   List<GradeOption> _getDefaultGradeOptions() {
