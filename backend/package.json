@@ -1,0 +1,33 @@
+{
+  "name": "hono",
+  "type": "module",
+  "scripts": {
+    "dev": " env $(cat .env | xargs) tsx watch src/index.ts ",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx src/db/migrate.ts",
+    "db:studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "@ai-sdk/google": "^1.2.19",
+    "@hono/node-server": "^1.14.2",
+    "@mastra/core": "^0.10.6",
+    "@types/multer": "^1.4.13",
+    "drizzle-orm": "^0.43.1",
+    "firebase-admin": "^13.4.0",
+    "heic-convert": "^2.1.0",
+    "hono": "^4.7.10",
+    "multer": "^2.0.1",
+    "pg": "^8.16.0",
+    "sharp": "^0.34.2"
+  },
+  "devDependencies": {
+    "@types/heic-convert": "^2.1.0",
+    "@types/node": "^20.11.17",
+    "@types/pg": "^8.15.2",
+    "drizzle-kit": "^0.31.1",
+    "tsx": "^4.7.1",
+    "typescript": "^5.8.3"
+  }
+}

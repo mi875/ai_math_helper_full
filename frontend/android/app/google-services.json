@@ -1,0 +1,62 @@
+{
+  "project_info": {
+    "project_number": "752221570574",
+    "project_id": "koreisai-cms",
+    "storage_bucket": "koreisai-cms.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:752221570574:android:81e495392a3117db27de5f",
+        "android_client_info": {
+          "package_name": "com.example.ai_math_helper"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "752221570574-fgu95qk2pd1enr1uib12ma0o6h43tmka.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.ai_math_helper",
+            "certificate_hash": "b4bec12d0f5ccdb323a176f0f445188a7e5080e4"
+          }
+        },
+        {
+          "client_id": "752221570574-n518s770fdarkan2r9bn0irdmt9n1mm4.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.ai_math_helper",
+            "certificate_hash": "85f9f28713bd81f0ab22646d5b6dcbdf0655637f"
+          }
+        },
+        {
+          "client_id": "752221570574-goo5l546lgq7qqvmnoq8sjk8ti35rjau.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAr-W1k2o4WWiY5pleKZtlcb6cluRoxC_c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "752221570574-goo5l546lgq7qqvmnoq8sjk8ti35rjau.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "752221570574-k58gmaiop2ho846tmlcbgivcmhvh38nk.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.aiMathHelper"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
