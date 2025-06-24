@@ -4,11 +4,25 @@ import 'package:ai_math_helper/view/notebook/create_notebook_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class NotebooksView extends ConsumerWidget {
+class NotebooksView extends ConsumerStatefulWidget {
   const NotebooksView({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<NotebooksView> createState() => _NotebooksViewState();
+}
+
+class _NotebooksViewState extends ConsumerState<NotebooksView> {
+  @override
+  void initState() {
+    super.initState();
+    // Load notebooks when the widget is first created
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(notebookModelProvider.notifier).loadNotebooks();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final notebookState = ref.watch(notebookModelProvider);
 
     return Scaffold(
@@ -49,7 +63,7 @@ class NotebooksView extends ConsumerWidget {
                       const SizedBox(height: 16),
                       FilledButton(
                         onPressed: () {
-                          ref.refresh(notebookModelProvider);
+                          ref.read(notebookModelProvider.notifier).loadNotebooks();
                         },
                         child: const Text('Retry'),
                       ),

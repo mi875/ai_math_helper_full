@@ -248,4 +248,245 @@ class ApiService {
       return null;
     }
   }
+
+  // Notebook Management
+  static Future<List<Map<String, dynamic>>?> getNotebooks() async {
+    try {
+      final token = await _getAuthToken();
+      if (token == null) return null;
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/notebooks'),
+        headers: _getHeaders(token: token),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(utf8.decode(response.bodyBytes));
+        return List<Map<String, dynamic>>.from(data['data']);
+      } else {
+        debugPrint('Failed to get notebooks: ${response.statusCode}');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('Error getting notebooks: $e');
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> getNotebook(String notebookUid) async {
+    try {
+      final token = await _getAuthToken();
+      if (token == null) return null;
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/notebooks/$notebookUid'),
+        headers: _getHeaders(token: token),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(utf8.decode(response.bodyBytes));
+        return data['data'];
+      } else {
+        debugPrint('Failed to get notebook: ${response.statusCode}');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('Error getting notebook: $e');
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> createNotebook({
+    required String title,
+    String? description,
+    String? coverColor,
+  }) async {
+    try {
+      final token = await _getAuthToken();
+      if (token == null) return null;
+
+      final body = {
+        'title': title,
+        if (description != null) 'description': description,
+        if (coverColor != null) 'coverColor': coverColor,
+      };
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/notebooks'),
+        headers: _getHeaders(token: token),
+        body: json.encode(body),
+      );
+
+      if (response.statusCode == 201) {
+        final data = json.decode(utf8.decode(response.bodyBytes));
+        return data['data'];
+      } else {
+        debugPrint('Failed to create notebook: ${response.statusCode}');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('Error creating notebook: $e');
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> updateNotebook({
+    required String notebookUid,
+    String? title,
+    String? description,
+    String? coverColor,
+  }) async {
+    try {
+      final token = await _getAuthToken();
+      if (token == null) return null;
+
+      final body = <String, dynamic>{};
+      if (title != null) body['title'] = title;
+      if (description != null) body['description'] = description;
+      if (coverColor != null) body['coverColor'] = coverColor;
+
+      final response = await http.put(
+        Uri.parse('$baseUrl/api/notebooks/$notebookUid'),
+        headers: _getHeaders(token: token),
+        body: json.encode(body),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(utf8.decode(response.bodyBytes));
+        return data['data'];
+      } else {
+        debugPrint('Failed to update notebook: ${response.statusCode}');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('Error updating notebook: $e');
+      return null;
+    }
+  }
+
+  static Future<bool> deleteNotebook(String notebookUid) async {
+    try {
+      final token = await _getAuthToken();
+      if (token == null) return false;
+
+      final response = await http.delete(
+        Uri.parse('$baseUrl/api/notebooks/$notebookUid'),
+        headers: _getHeaders(token: token),
+      );
+
+      if (response.statusCode == 200) {
+        debugPrint('Notebook deleted successfully');
+        return true;
+      } else {
+        debugPrint('Failed to delete notebook: ${response.statusCode}');
+        return false;
+      }
+    } catch (e) {
+      debugPrint('Error deleting notebook: $e');
+      return false;
+    }
+  }
+
+  // Math Problem Management
+  static Future<Map<String, dynamic>?> createProblem({
+    required String notebookUid,
+    required String title,
+    String? description,
+    List<String>? imagePaths,
+    String? scribbleData,
+    List<String>? tags,
+  }) async {
+    try {
+      final token = await _getAuthToken();
+      if (token == null) return null;
+
+      final body = {
+        'title': title,
+        if (description != null) 'description': description,
+        if (imagePaths != null) 'imagePaths': imagePaths,
+        if (scribbleData != null) 'scribbleData': scribbleData,
+        if (tags != null) 'tags': tags,
+      };
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/notebooks/$notebookUid/problems'),
+        headers: _getHeaders(token: token),
+        body: json.encode(body),
+      );
+
+      if (response.statusCode == 201) {
+        final data = json.decode(utf8.decode(response.bodyBytes));
+        return data['data'];
+      } else {
+        debugPrint('Failed to create problem: ${response.statusCode}');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('Error creating problem: $e');
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> updateProblem({
+    required String problemUid,
+    String? title,
+    String? description,
+    List<String>? imagePaths,
+    String? scribbleData,
+    String? status,
+    List<String>? tags,
+  }) async {
+    try {
+      final token = await _getAuthToken();
+      if (token == null) return null;
+
+      final body = <String, dynamic>{};
+      if (title != null) body['title'] = title;
+      if (description != null) body['description'] = description;
+      if (imagePaths != null) body['imagePaths'] = imagePaths;
+      if (scribbleData != null) body['scribbleData'] = scribbleData;
+      if (status != null) body['status'] = status;
+      if (tags != null) body['tags'] = tags;
+
+      final response = await http.put(
+        Uri.parse('$baseUrl/api/problems/$problemUid'),
+        headers: _getHeaders(token: token),
+        body: json.encode(body),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(utf8.decode(response.bodyBytes));
+        return data['data'];
+      } else {
+        debugPrint('Failed to update problem: ${response.statusCode}');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('Error updating problem: $e');
+      return null;
+    }
+  }
+
+  static Future<bool> deleteProblem(String problemUid) async {
+    try {
+      final token = await _getAuthToken();
+      if (token == null) return false;
+
+      final response = await http.delete(
+        Uri.parse('$baseUrl/api/problems/$problemUid'),
+        headers: _getHeaders(token: token),
+      );
+
+      if (response.statusCode == 200) {
+        debugPrint('Problem deleted successfully');
+        return true;
+      } else {
+        debugPrint('Failed to delete problem: ${response.statusCode}');
+        return false;
+      }
+    } catch (e) {
+      debugPrint('Error deleting problem: $e');
+      return false;
+    }
+  }
 }

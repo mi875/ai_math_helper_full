@@ -3,6 +3,7 @@ import 'package:ai_math_helper/data/notebook/data/notebook_data.dart';
 import 'package:ai_math_helper/data/notebook/data/math_problem.dart';
 import 'package:ai_math_helper/data/notebook/data/ai_feedback.dart';
 import 'package:ai_math_helper/data/notebook/data/problem_status.dart';
+import 'package:ai_math_helper/services/api_service.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:uuid/uuid.dart';
 import 'package:path_provider/path_provider.dart';
@@ -16,82 +17,171 @@ class NotebookModel extends _$NotebookModel {
 
   @override
   NotebookData build() {
-    // Initialize with sample data immediately
-    final sampleNotebooks = [
-      Notebook(
-        id: _uuid.v4(),
-        title: 'Algebra Basics',
-        description: 'Linear equations and basic algebra problems',
-        createdAt: DateTime.now().subtract(const Duration(days: 7)),
-        updatedAt: DateTime.now().subtract(const Duration(days: 1)),
-        problems: [],
-        coverColor: 'blue',
-      ),
-      Notebook(
-        id: _uuid.v4(),
-        title: 'Geometry',
-        description: 'Shapes, angles, and geometric calculations',
-        createdAt: DateTime.now().subtract(const Duration(days: 3)),
-        updatedAt: DateTime.now(),
-        problems: [],
-        coverColor: 'green',
-      ),
-    ];
-    
-    return NotebookData(notebooks: sampleNotebooks);
+    // Initialize with empty state, notebooks will be loaded from API
+    return const NotebookData();
   }
 
-  Future<Notebook> createNotebook({
+  // Load notebooks from API
+  Future<void> loadNotebooks() async {
+    try {
+      state = state.copyWith(isLoading: true, errorMessage: null);
+      
+      final notebooksData = await ApiService.getNotebooks();
+      if (notebooksData != null) {
+        final notebooks = notebooksData.map((data) => _parseNotebookFromApi(data)).toList();
+        state = state.copyWith(
+          notebooks: notebooks,
+          isLoading: false,
+        );
+      } else {
+        state = state.copyWith(
+          isLoading: false,
+          errorMessage: 'Failed to load notebooks',
+        );
+      }
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'Error loading notebooks: $e',
+      );
+    }
+  }
+
+  // Parse notebook data from API response
+  Notebook _parseNotebookFromApi(Map<String, dynamic> data) {
+    return Notebook(
+      id: data['uid'] ?? data['id'].toString(),
+      title: data['title'] ?? '',
+      description: data['description'],
+      createdAt: DateTime.tryParse(data['createdAt'] ?? '') ?? DateTime.now(),
+      updatedAt: DateTime.tryParse(data['updatedAt'] ?? '') ?? DateTime.now(),
+      problems: (data['problems'] as List<dynamic>?)?.map((problemData) => 
+        _parseProblemFromApi(problemData as Map<String, dynamic>)
+      ).toList() ?? [],
+      coverColor: data['coverColor'] ?? 'default',
+    );
+  }
+
+  // Parse problem data from API response
+  MathProblem _parseProblemFromApi(Map<String, dynamic> data) {
+    return MathProblem(
+      id: data['uid'] ?? data['id'].toString(),
+      title: data['title'] ?? '',
+      description: data['description'],
+      createdAt: DateTime.tryParse(data['createdAt'] ?? '') ?? DateTime.now(),
+      updatedAt: DateTime.tryParse(data['updatedAt'] ?? '') ?? DateTime.now(),
+      imagePaths: List<String>.from(data['imagePaths'] ?? []),
+      scribbleData: data['scribbleData'],
+      status: _parseStatusFromString(data['status'] ?? 'unsolved'),
+      tags: List<String>.from(data['tags'] ?? []),
+      aiFeedbacks: [], // AI feedbacks would be loaded separately
+    );
+  }
+
+  // Parse status from string
+  ProblemStatus _parseStatusFromString(String status) {
+    switch (status) {
+      case 'in_progress':
+        return ProblemStatus.inProgress;
+      case 'solved':
+        return ProblemStatus.solved;
+      case 'needs_help':
+        return ProblemStatus.needsHelp;
+      default:
+        return ProblemStatus.unsolved;
+    }
+  }
+
+  // Convert status to string
+  String _statusToString(ProblemStatus status) {
+    switch (status) {
+      case ProblemStatus.inProgress:
+        return 'in_progress';
+      case ProblemStatus.solved:
+        return 'solved';
+      case ProblemStatus.needsHelp:
+        return 'needs_help';
+      default:
+        return 'unsolved';
+    }
+  }
+
+  Future<Notebook?> createNotebook({
     required String title,
     String? description,
     String coverColor = 'default',
   }) async {
-    final notebook = Notebook(
-      id: _uuid.v4(),
-      title: title,
-      description: description,
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-      coverColor: coverColor,
-    );
+    try {
+      final notebookData = await ApiService.createNotebook(
+        title: title,
+        description: description,
+        coverColor: coverColor,
+      );
 
-    final updatedNotebooks = [...state.notebooks, notebook];
-    state = state.copyWith(notebooks: updatedNotebooks);
-    
-    // TODO: Persist to storage
-    return notebook;
+      if (notebookData != null) {
+        final notebook = _parseNotebookFromApi(notebookData);
+        final updatedNotebooks = [...state.notebooks, notebook];
+        state = state.copyWith(notebooks: updatedNotebooks);
+        return notebook;
+      }
+      return null;
+    } catch (e) {
+      state = state.copyWith(errorMessage: 'Failed to create notebook: $e');
+      return null;
+    }
   }
 
-  Future<void> updateNotebook(String notebookId, {
+  Future<bool> updateNotebook(String notebookId, {
     String? title,
     String? description,
     String? coverColor,
   }) async {
-    final notebooks = state.notebooks.map((notebook) {
-      if (notebook.id == notebookId) {
-        return notebook.copyWith(
-          title: title ?? notebook.title,
-          description: description ?? notebook.description,
-          coverColor: coverColor ?? notebook.coverColor,
-          updatedAt: DateTime.now(),
-        );
+    try {
+      final updatedData = await ApiService.updateNotebook(
+        notebookUid: notebookId,
+        title: title,
+        description: description,
+        coverColor: coverColor,
+      );
+
+      if (updatedData != null) {
+        final notebooks = state.notebooks.map((notebook) {
+          if (notebook.id == notebookId) {
+            return _parseNotebookFromApi(updatedData);
+          }
+          return notebook;
+        }).toList();
+
+        state = state.copyWith(notebooks: notebooks);
+        return true;
       }
-      return notebook;
-    }).toList();
-
-    state = state.copyWith(notebooks: notebooks);
+      return false;
+    } catch (e) {
+      state = state.copyWith(errorMessage: 'Failed to update notebook: $e');
+      return false;
+    }
   }
 
-  Future<void> deleteNotebook(String notebookId) async {
-    final updatedNotebooks = state.notebooks
-        .where((notebook) => notebook.id != notebookId)
-        .toList();
-    
-    state = state.copyWith(notebooks: updatedNotebooks);
-    // TODO: Clean up associated files and persist changes
+  Future<bool> deleteNotebook(String notebookId) async {
+    try {
+      final success = await ApiService.deleteNotebook(notebookId);
+      
+      if (success) {
+        final updatedNotebooks = state.notebooks
+            .where((notebook) => notebook.id != notebookId)
+            .toList();
+        
+        state = state.copyWith(notebooks: updatedNotebooks);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      state = state.copyWith(errorMessage: 'Failed to delete notebook: $e');
+      return false;
+    }
   }
 
-  Future<MathProblem> addProblemToNotebook({
+  Future<MathProblem?> addProblemToNotebook({
     required String notebookId,
     required String title,
     String? description,
@@ -99,33 +189,41 @@ class NotebookModel extends _$NotebookModel {
     String? scribbleData,
     List<String>? tags,
   }) async {
-    final problem = MathProblem(
-      id: _uuid.v4(),
-      title: title,
-      description: description,
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-      imagePaths: imagePaths,
-      scribbleData: scribbleData,
-      tags: tags ?? [],
-    );
+    try {
+      final problemData = await ApiService.createProblem(
+        notebookUid: notebookId,
+        title: title,
+        description: description,
+        imagePaths: imagePaths,
+        scribbleData: scribbleData,
+        tags: tags,
+      );
 
-    final notebooks = state.notebooks.map((notebook) {
-      if (notebook.id == notebookId) {
-        final updatedProblems = [...notebook.problems, problem];
-        return notebook.copyWith(
-          problems: updatedProblems,
-          updatedAt: DateTime.now(),
-        );
+      if (problemData != null) {
+        final problem = _parseProblemFromApi(problemData);
+        
+        final notebooks = state.notebooks.map((notebook) {
+          if (notebook.id == notebookId) {
+            final updatedProblems = [...notebook.problems, problem];
+            return notebook.copyWith(
+              problems: updatedProblems,
+              updatedAt: DateTime.now(),
+            );
+          }
+          return notebook;
+        }).toList();
+
+        state = state.copyWith(notebooks: notebooks);
+        return problem;
       }
-      return notebook;
-    }).toList();
-
-    state = state.copyWith(notebooks: notebooks);
-    return problem;
+      return null;
+    } catch (e) {
+      state = state.copyWith(errorMessage: 'Failed to create problem: $e');
+      return null;
+    }
   }
 
-  Future<void> updateProblem({
+  Future<bool> updateProblem({
     required String notebookId,
     required String problemId,
     String? title,
@@ -135,50 +233,74 @@ class NotebookModel extends _$NotebookModel {
     ProblemStatus? status,
     List<String>? tags,
   }) async {
-    final notebooks = state.notebooks.map((notebook) {
-      if (notebook.id == notebookId) {
-        final problems = notebook.problems.map((problem) {
-          if (problem.id == problemId) {
-            return problem.copyWith(
-              title: title ?? problem.title,
-              description: description ?? problem.description,
-              imagePaths: imagePaths ?? problem.imagePaths,
-              scribbleData: scribbleData ?? problem.scribbleData,
-              status: status ?? problem.status,
-              tags: tags ?? problem.tags,
+    try {
+      final updatedData = await ApiService.updateProblem(
+        problemUid: problemId,
+        title: title,
+        description: description,
+        imagePaths: imagePaths,
+        scribbleData: scribbleData,
+        status: status != null ? _statusToString(status) : null,
+        tags: tags,
+      );
+
+      if (updatedData != null) {
+        final updatedProblem = _parseProblemFromApi(updatedData);
+        
+        final notebooks = state.notebooks.map((notebook) {
+          if (notebook.id == notebookId) {
+            final problems = notebook.problems.map((problem) {
+              if (problem.id == problemId) {
+                return updatedProblem;
+              }
+              return problem;
+            }).toList();
+            
+            return notebook.copyWith(
+              problems: problems,
               updatedAt: DateTime.now(),
             );
           }
-          return problem;
+          return notebook;
         }).toList();
-        
-        return notebook.copyWith(
-          problems: problems,
-          updatedAt: DateTime.now(),
-        );
-      }
-      return notebook;
-    }).toList();
 
-    state = state.copyWith(notebooks: notebooks);
+        state = state.copyWith(notebooks: notebooks);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      state = state.copyWith(errorMessage: 'Failed to update problem: $e');
+      return false;
+    }
   }
 
-  Future<void> deleteProblem(String notebookId, String problemId) async {
-    final notebooks = state.notebooks.map((notebook) {
-      if (notebook.id == notebookId) {
-        final problems = notebook.problems
-            .where((problem) => problem.id != problemId)
-            .toList();
-        
-        return notebook.copyWith(
-          problems: problems,
-          updatedAt: DateTime.now(),
-        );
-      }
-      return notebook;
-    }).toList();
+  Future<bool> deleteProblem(String notebookId, String problemId) async {
+    try {
+      final success = await ApiService.deleteProblem(problemId);
+      
+      if (success) {
+        final notebooks = state.notebooks.map((notebook) {
+          if (notebook.id == notebookId) {
+            final problems = notebook.problems
+                .where((problem) => problem.id != problemId)
+                .toList();
+            
+            return notebook.copyWith(
+              problems: problems,
+              updatedAt: DateTime.now(),
+            );
+          }
+          return notebook;
+        }).toList();
 
-    state = state.copyWith(notebooks: notebooks);
+        state = state.copyWith(notebooks: notebooks);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      state = state.copyWith(errorMessage: 'Failed to delete problem: $e');
+      return false;
+    }
   }
 
   Future<String> saveImageFromCamera(File imageFile) async {

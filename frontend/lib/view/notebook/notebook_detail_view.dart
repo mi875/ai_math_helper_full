@@ -443,11 +443,12 @@ class NotebookDetailView extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => AddProblemDialog(
-        onProblemAdded: (title, description, tags) {
+        onProblemAdded: (title, description, tags, imagePaths) {
           ref.read(notebookModelProvider.notifier).addProblemToNotebook(
             notebookId: notebook.id,
             title: title,
             description: description,
+            imagePaths: imagePaths,
             tags: tags,
           );
         },
@@ -460,12 +461,13 @@ class NotebookDetailView extends ConsumerWidget {
       context: context,
       builder: (context) => AddProblemDialog(
         problem: problem,
-        onProblemAdded: (title, description, tags) {
+        onProblemAdded: (title, description, tags, imagePaths) {
           ref.read(notebookModelProvider.notifier).updateProblem(
             notebookId: notebook.id,
             problemId: problem.id,
             title: title,
             description: description,
+            imagePaths: imagePaths,
             tags: tags,
           );
         },

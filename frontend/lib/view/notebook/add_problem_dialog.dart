@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:ai_math_helper/services/image_import_service.dart';
+import 'dart:io';
 
 class AddProblemDialog extends StatefulWidget {
-  final Function(String title, String? description, List<String> tags) onProblemAdded;
+  final Function(String title, String? description, List<String> tags, List<String> imagePaths) onProblemAdded;
   final dynamic problem; // For editing existing problem
 
   const AddProblemDialog({
@@ -20,6 +22,7 @@ class _AddProblemDialogState extends State<AddProblemDialog> {
   final _tagController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   final List<String> _tags = [];
+  final List<String> _imagePaths = [];
 
   @override
   void initState() {
@@ -28,6 +31,7 @@ class _AddProblemDialogState extends State<AddProblemDialog> {
       _titleController.text = widget.problem.title;
       _descriptionController.text = widget.problem.description ?? '';
       _tags.addAll(widget.problem.tags ?? []);
+      _imagePaths.addAll(widget.problem.imagePaths ?? []);
     }
   }
 
@@ -131,6 +135,96 @@ class _AddProblemDialogState extends State<AddProblemDialog> {
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
+              const SizedBox(height: 16),
+              Text(
+                'Images',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _importFromCamera,
+                      icon: const Icon(Icons.camera_alt),
+                      label: const Text('Camera'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _importFromGallery,
+                      icon: const Icon(Icons.photo_library),
+                      label: const Text('Gallery'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _scanDocument,
+                      icon: const Icon(Icons.document_scanner),
+                      label: const Text('Scanner'),
+                    ),
+                  ),
+                ],
+              ),
+              if (_imagePaths.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 80,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _imagePaths.length,
+                    itemBuilder: (context, index) {
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: Stack(
+                          children: [
+                            Container(
+                              width: 80,
+                              height: 80,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: Theme.of(context).colorScheme.outline,
+                                ),
+                              ),
+                              clipBehavior: Clip.antiAlias,
+                              child: Image.file(
+                                File(_imagePaths[index]),
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return const Icon(Icons.broken_image);
+                                },
+                              ),
+                            ),
+                            Positioned(
+                              top: 2,
+                              right: 2,
+                              child: GestureDetector(
+                                onTap: () => _removeImage(index),
+                                child: Container(
+                                  width: 20,
+                                  height: 20,
+                                  decoration: const BoxDecoration(
+                                    color: Colors.red,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.close,
+                                    color: Colors.white,
+                                    size: 14,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -158,6 +252,33 @@ class _AddProblemDialogState extends State<AddProblemDialog> {
     }
   }
 
+  Future<void> _importFromCamera() async {
+    final imagePaths = await ImageImportService.importFromCamera();
+    setState(() {
+      _imagePaths.addAll(imagePaths);
+    });
+  }
+
+  Future<void> _importFromGallery() async {
+    final imagePaths = await ImageImportService.importFromGallery();
+    setState(() {
+      _imagePaths.addAll(imagePaths);
+    });
+  }
+
+  Future<void> _scanDocument() async {
+    final imagePaths = await ImageImportService.scanDocument();
+    setState(() {
+      _imagePaths.addAll(imagePaths);
+    });
+  }
+
+  void _removeImage(int index) {
+    setState(() {
+      _imagePaths.removeAt(index);
+    });
+  }
+
   void _saveProblem() {
     if (_formKey.currentState!.validate()) {
       widget.onProblemAdded(
@@ -166,6 +287,7 @@ class _AddProblemDialogState extends State<AddProblemDialog> {
             ? null
             : _descriptionController.text.trim(),
         _tags,
+        _imagePaths,
       );
       Navigator.of(context).pop();
     }

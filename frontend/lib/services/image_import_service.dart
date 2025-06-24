@@ -105,6 +105,30 @@ class ImageImportService {
     }
   }
 
+  static Future<List<String>> scanDocument() async {
+    try {
+      final scannedDocs = await FlutterDocScanner().getScanDocuments();
+      
+      if (scannedDocs != null && scannedDocs.isNotEmpty) {
+        final List<String> imagePaths = [];
+        
+        for (final docPath in scannedDocs) {
+          final savedPath = await _saveImageToAppDirectory(File(docPath));
+          if (savedPath != null) {
+            imagePaths.add(savedPath);
+          }
+        }
+        
+        return imagePaths;
+      }
+      
+      return [];
+    } catch (e) {
+      debugPrint('Error scanning document: $e');
+      return [];
+    }
+  }
+
   static Future<String?> importSingleFromCamera() async {
     try {
       final XFile? image = await _picker.pickImage(
