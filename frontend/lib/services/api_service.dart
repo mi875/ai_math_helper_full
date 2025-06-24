@@ -41,7 +41,7 @@ class ApiService {
       );
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
+        final data = json.decode(utf8.decode(response.bodyBytes));
         return data['profile'];
       } else {
         debugPrint('Failed to get user profile: ${response.statusCode}');
@@ -98,7 +98,7 @@ class ApiService {
       final file = File(imageFile.path);
       final fileSize = await file.length();
       const maxSizeBytes = 5 * 1024 * 1024; // 5MB
-      
+
       if (fileSize > maxSizeBytes) {
         debugPrint('File too large: ${fileSize / (1024 * 1024)}MB (max 5MB)');
         return null;
@@ -113,10 +113,15 @@ class ApiService {
 
       // Detect MIME type from file
       String? mimeType = lookupMimeType(imageFile.path);
-      
+
       // Validate and set MIME type for supported formats
-      const supportedFormats = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-      
+      const supportedFormats = [
+        'image/jpeg',
+        'image/png',
+        'image/gif',
+        'image/webp',
+      ];
+
       if (mimeType == null || !supportedFormats.contains(mimeType)) {
         final extension = imageFile.path.toLowerCase().split('.').last;
         switch (extension) {
@@ -138,7 +143,7 @@ class ApiService {
             return null;
         }
       }
-      
+
       // Final validation that we have a supported format
       if (!supportedFormats.contains(mimeType)) {
         debugPrint('Invalid MIME type detected: $mimeType');
@@ -209,7 +214,7 @@ class ApiService {
       );
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
+        final data = json.decode(utf8.decode(response.bodyBytes));
         return List<Map<String, dynamic>>.from(data['grades']);
       } else {
         debugPrint('Failed to get grade options: ${response.statusCode}');
@@ -233,7 +238,7 @@ class ApiService {
       );
 
       if (response.statusCode == 200) {
-        return json.decode(response.body);
+        return json.decode(utf8.decode(response.bodyBytes));
       } else {
         debugPrint('Failed to get token status: ${response.statusCode}');
         return null;
