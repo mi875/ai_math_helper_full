@@ -53,3 +53,43 @@ export const apiUsage = pgTable('api_usage', {
   status: varchar('status', { length: 20 }).notNull(), // 'success', 'error', 'rate_limited'
   createdAt: timestamp('created_at').defaultNow(),
 });
+
+// Notebooks table
+export const notebooks = pgTable('notebooks', {
+  id: serial('id').primaryKey(),
+  uid: varchar('uid', { length: 128 }).notNull(), // UUID for frontend
+  userId: varchar('user_id', { length: 128 }).notNull(), // Firebase UID reference
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text('description'),
+  coverColor: varchar('cover_color', { length: 50 }).default('default'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+// Math problems table
+export const mathProblems = pgTable('math_problems', {
+  id: serial('id').primaryKey(),
+  uid: varchar('uid', { length: 128 }).notNull(), // UUID for frontend
+  notebookId: integer('notebook_id').notNull(),
+  userId: varchar('user_id', { length: 128 }).notNull(), // Firebase UID reference
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text('description'),
+  imagePaths: text('image_paths'), // JSON array of image paths
+  scribbleData: text('scribble_data'), // Scribble drawing data
+  status: varchar('status', { length: 20 }).default('unsolved'), // 'unsolved', 'in_progress', 'solved', 'needs_help'
+  tags: text('tags'), // JSON array of tags
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+// AI feedback table
+export const aiFeedbacks = pgTable('ai_feedbacks', {
+  id: serial('id').primaryKey(),
+  uid: varchar('uid', { length: 128 }).notNull(), // UUID for frontend
+  problemId: integer('problem_id').notNull(),
+  userId: varchar('user_id', { length: 128 }).notNull(), // Firebase UID reference
+  feedbackType: varchar('feedback_type', { length: 50 }).notNull(), // 'hint', 'solution', 'correction'
+  content: text('content').notNull(),
+  tokensUsed: integer('tokens_used').default(0),
+  createdAt: timestamp('created_at').defaultNow(),
+});

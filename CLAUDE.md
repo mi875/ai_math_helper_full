@@ -18,12 +18,12 @@ AI Math Helper is a full-stack application consisting of a Flutter mobile fronte
 - `cd frontend && dart run custom_lint` - Run custom lints including Riverpod lints
 
 ### Backend (Node.js/Hono)
-- `cd backend && npm run dev` - Start development server with hot reload
-- `cd backend && npm run build` - Build TypeScript to JavaScript
-- `cd backend && npm start` - Start production server
-- `cd backend && npm run db:generate` - Generate database migrations
-- `cd backend && npm run db:migrate` - Run database migrations
-- `cd backend && npm run db:studio` - Open Drizzle Studio for database management
+- `cd backend && pnpm run dev` - Start development server with hot reload
+- `cd backend && pnpm run build` - Build TypeScript to JavaScript
+- `cd backend && pnpm start` - Start production server
+- `cd backend && pnpm run db:generate` - Generate database migrations
+- `cd backend && pnpm run db:migrate` - Run database migrations
+- `cd backend && pnpm run db:studio` - Open Drizzle Studio for database management
 
 ### Database Setup
 The backend uses PostgreSQL with Drizzle ORM. Database runs on localhost:5431 with compose.yaml in backend/db/

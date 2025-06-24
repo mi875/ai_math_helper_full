@@ -8,6 +8,7 @@ import {
   deleteProfileImage
 } from './controllers/userController.js';
 import { tokenController } from './controllers/tokenController.js';
+import { notebookController } from './controllers/notebookController.js';
 import { 
   profileImageUploadMiddleware, 
   serveProfileImage 
@@ -38,6 +39,19 @@ apiRouter.get('/tokens/status', tokenController.getTokenStatus);
 apiRouter.get('/tokens/usage', tokenController.getUsageHistory);
 apiRouter.get('/tokens/plans', tokenController.getTokenPlans);
 apiRouter.post('/tokens/add', tokenController.addTokens); // Admin only
+
+// Notebook endpoints
+apiRouter.get('/notebooks', notebookController.getNotebooks);
+apiRouter.get('/notebooks/:uid', notebookController.getNotebook);
+apiRouter.post('/notebooks', notebookController.createNotebook);
+apiRouter.put('/notebooks/:uid', notebookController.updateNotebook);
+apiRouter.delete('/notebooks/:uid', notebookController.deleteNotebook);
+
+// Math problem endpoints
+apiRouter.post('/notebooks/:uid/problems', notebookController.createProblem);
+apiRouter.put('/problems/:problemUid', notebookController.updateProblem);
+apiRouter.delete('/problems/:problemUid', notebookController.deleteProblem);
+apiRouter.get('/problems/:problemUid/feedbacks', notebookController.getProblemFeedbacks);
 
 // Health check endpoint - public, no auth needed
 // and hello world
