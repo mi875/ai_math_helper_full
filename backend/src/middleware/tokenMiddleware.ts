@@ -14,8 +14,6 @@ export const TOKEN_COSTS = {
   BASIC_AI_QUERY: 10,
   COMPLEX_AI_QUERY: 25,
   IMAGE_GENERATION: 50,
-  PROBLEM_SOLVING: 15,
-  EXPLANATION: 20,
 } as const;
 
 // Middleware to check and consume tokens

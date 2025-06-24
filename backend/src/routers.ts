@@ -1,16 +1,5 @@
 import { Hono } from 'hono';
 import { authMiddleware } from './middleware/authMiddleware.js';
-import { tokenMiddleware, TOKEN_COSTS } from './middleware/tokenMiddleware.js';
-import { 
-  getUserMathProblems, 
-  getMathProblem, 
-  createMathProblem, 
-  updateMathProblem, 
-  deleteMathProblem,
-  solveMathProblemAI,
-  explainMathConcept,
-  generatePracticeProblems
-} from './controllers/mathProblemController.js';
 import {
   getUserProfile,
   updateUserProfile,
@@ -28,27 +17,6 @@ import {
 const apiRouter = new Hono()
   .use('*', authMiddleware) // Apply auth middleware to all routes under /api
   .get('/', (c) => c.json({ message: 'Protected API endpoint' }));
-
-// Math problems endpoints
-apiRouter.get('/math/problems', getUserMathProblems);
-apiRouter.get('/math/problems/:id', getMathProblem);
-apiRouter.post('/math/problems', createMathProblem);
-apiRouter.put('/math/problems/:id', updateMathProblem);
-apiRouter.delete('/math/problems/:id', deleteMathProblem);
-
-// AI-powered math endpoints (with token middleware)
-apiRouter.post('/math/ai/solve', 
-  tokenMiddleware({ requiredTokens: TOKEN_COSTS.PROBLEM_SOLVING, endpoint: '/math/ai/solve' }),
-  solveMathProblemAI
-);
-apiRouter.post('/math/ai/explain', 
-  tokenMiddleware({ requiredTokens: TOKEN_COSTS.EXPLANATION, endpoint: '/math/ai/explain' }),
-  explainMathConcept
-);
-apiRouter.post('/math/ai/generate', 
-  tokenMiddleware({ requiredTokens: TOKEN_COSTS.COMPLEX_AI_QUERY, endpoint: '/math/ai/generate' }),
-  generatePracticeProblems
-);
 
 // User data endpoints
 apiRouter.get('/user/profile', getUserProfile);

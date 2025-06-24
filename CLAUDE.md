@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-AI Math Helper is a full-stack application consisting of a Flutter mobile frontend and a Node.js backend API. The app helps students solve math problems using AI, with features for uploading problem images, managing notebooks, and tracking token usage.
+AI Math Helper is a full-stack application consisting of a Flutter mobile frontend and a Node.js backend API. The app provides user profile management, image upload functionality, and token-based API access control.
 
 ## Development Commands
 
@@ -48,16 +48,11 @@ ai_math_helper_full/
 Key backend components:
 - `src/index.ts` - Main server entry point
 - `src/routers.ts` - API route definitions
-- `src/db/schema.ts` - Database schema with users, mathProblems, apiUsage tables
-- `src/mastra/` - AI agents for math solving, explanation, and practice generation
-- `src/controllers/` - Request handlers for math, user, and token management
+- `src/db/schema.ts` - Database schema with users and apiUsage tables
+- `src/controllers/` - Request handlers for user and token management
 - `src/middleware/` - Auth, token management, and file upload middleware
 
 ### Backend API Routes
-- `/api/math/problems` - CRUD operations for math problems
-- `/api/math/ai/solve` - AI-powered problem solving (requires tokens)
-- `/api/math/ai/explain` - AI concept explanations (requires tokens)  
-- `/api/math/ai/generate` - Generate practice problems (requires tokens)
 - `/api/user/profile` - User profile management with image upload
 - `/api/tokens/status` - Token usage tracking
 - `/health` - Public health check endpoint
@@ -66,21 +61,12 @@ Key backend components:
 - **State Management**: Riverpod with code generation
 - **Data Classes**: Freezed for immutable models
 - **Authentication**: Firebase Auth with Google Sign-In
-- **Document Scanning**: flutter_doc_scanner for math problem capture
-- **Handwriting Input**: Custom scribble library fork
 
 Frontend structure follows the existing CLAUDE.md in frontend/ directory.
 
 ### Database Schema
 - **users**: Firebase UID, profile data, token allocation and usage tracking
-- **mathProblems**: User problems with solutions and token costs
 - **apiUsage**: Detailed API usage tracking for billing/analytics
-
-### AI Integration
-Uses Mastra framework with three specialized agents:
-- **mathSolver**: Solves mathematical problems
-- **mathExplainer**: Explains mathematical concepts
-- **practiceGenerator**: Creates practice problems
 
 ### Token System
 - Users have monthly token allocations (default: 1000)

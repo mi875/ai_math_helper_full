@@ -42,17 +42,6 @@ export const users = pgTable('users', {
   updatedAt: timestamp('updated_at').defaultNow(),
 });
 
-// Example: Math problems table
-export const mathProblems = pgTable('math_problems', {
-  id: serial('id').primaryKey(),
-  userId: varchar('user_id', { length: 128 }).notNull(), // Firebase Auth UID
-  problem: text('problem').notNull(),
-  solution: text('solution'),
-  tokensUsed: integer('tokens_used').default(0), // Tokens consumed for this problem
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow(),
-});
-
 // API usage tracking table
 export const apiUsage = pgTable('api_usage', {
   id: serial('id').primaryKey(),

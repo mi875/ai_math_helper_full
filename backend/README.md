@@ -53,9 +53,13 @@ The API will be available at http://localhost:3000
 
 - Public: `GET /health` - Health check endpoint
 - Authentication required:
-  - `GET /api/math/problems` - Get all math problems
-  - `GET /api/math/problems/:id` - Get a specific math problem
-  - `POST /api/math/problems` - Create a new math problem
-  - `PUT /api/math/problems/:id` - Update a math problem
-  - `DELETE /api/math/problems/:id` - Delete a math problem
   - `GET /api/user/profile` - Get user profile
+  - `PUT /api/user/profile` - Update user profile
+  - `GET /api/user/grades` - Get available grades
+  - `POST /api/user/profile/image` - Upload profile image
+  - `DELETE /api/user/profile/image` - Delete profile image
+  - `GET /api/files/profile-images/:filename` - Serve profile image
+  - `GET /api/tokens/status` - Get token status
+  - `GET /api/tokens/usage` - Get usage history
+  - `GET /api/tokens/plans` - Get token plans
+  - `POST /api/tokens/add` - Add tokens (Admin only)
