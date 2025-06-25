@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:scribble/scribble.dart';
+import 'package:ai_math_helper/data/notebook/data/math_problem.dart';
+import 'package:ai_math_helper/services/authenticated_image_provider.dart';
 
 class MathInputScreen extends ConsumerStatefulWidget {
-  const MathInputScreen({super.key});
+  final MathProblem? problem;
+
+  const MathInputScreen({super.key, this.problem});
 
   @override
   ConsumerState<MathInputScreen> createState() => _MathInputScreenState();
@@ -11,19 +15,40 @@ class MathInputScreen extends ConsumerStatefulWidget {
 
 class _MathInputScreenState extends ConsumerState<MathInputScreen> {
   late ScribbleNotifier notifier;
-  bool _isSheetWidthExpanded = false; // State for panel width
-  final double _collapsedSheetWidthFraction = 0.3; // 30% of screen width
-  final double _expandedSheetWidthFraction = 0.5; // 50% of screen width
+  bool _isSheetWidthExpanded = false;
+  final double _collapsedSheetWidthFraction = 0.3;
+  final double _expandedSheetWidthFraction = 0.5;
+  late TransformationController _transformationController;
 
   @override
   void initState() {
     super.initState();
-    notifier = ScribbleNotifier();
+    notifier = ScribbleNotifier(widths: [2]);
+    _transformationController = TransformationController();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _setThemeAwarePenColor();
+  }
+
+  void _setThemeAwarePenColor() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final penColor = isDark ? Colors.white : Colors.black;
+
+    // Try to set pen color if the method exists
+    try {
+      notifier.setColor(penColor);
+    } catch (e) {
+      // If setColor doesn't exist, the pen will use default color
+    }
   }
 
   @override
   void dispose() {
     notifier.dispose();
+    _transformationController.dispose();
     super.dispose();
   }
 
@@ -49,6 +74,12 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
             onPressed: () => notifier.redo(),
           ),
           IconButton(
+            icon: const Icon(Icons.zoom_out_map),
+            onPressed:
+                () => _transformationController.value = Matrix4.identity(),
+            tooltip: 'Reset zoom and pan',
+          ),
+          IconButton(
             icon: const Icon(Icons.clear),
             onPressed: () => notifier.clear(),
           ),
@@ -57,7 +88,39 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
       body: Stack(
         // Use Stack to overlay the draggable sheet
         children: [
-          Scribble(notifier: notifier, drawPen: true),
+          InteractiveViewer(
+            transformationController: _transformationController,
+            minScale: 0.5,
+            maxScale: 4.0,
+            child: Container(
+              color: Theme.of(context).colorScheme.surface,
+              child: Stack(
+                children: [
+                  if (widget.problem?.image != null)
+                    Positioned(
+                      top: 16,
+                      left: 16,
+                      child: Container(
+                        height: MediaQuery.of(context).size.height * 0.3,
+                        child: AuthenticatedImage(
+                          imageUrl: widget.problem!.image!.fileUrl,
+                          fit: BoxFit.contain,
+                          placeholder: const Center(
+                            child: Icon(Icons.image, size: 24),
+                          ),
+                          errorWidget: const Center(
+                            child: Icon(Icons.broken_image, size: 24),
+                          ),
+                        ),
+                      ),
+                    ),
+                  Scribble(notifier: notifier, drawPen: true),
+                ],
+              ),
+            ),
+          ),
+          // Problem image in top left
+
           // Align the entire draggable panel to the bottom-left
           Align(
             alignment: Alignment.bottomLeft,

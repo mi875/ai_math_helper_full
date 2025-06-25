@@ -207,11 +207,11 @@ class _NotebookDetailViewState extends ConsumerState<NotebookDetailView> {
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: () {
-          // TODO: Open problem detail view or math input with this problem
+          // Open math input with this problem
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => const MathInputScreen(),
+              builder: (context) => MathInputScreen(problem: problem),
             ),
           );
         },
