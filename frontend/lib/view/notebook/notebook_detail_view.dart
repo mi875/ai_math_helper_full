@@ -1,12 +1,13 @@
-import 'dart:io';
 import 'package:ai_math_helper/data/notebook/model/notebook_model.dart';
 import 'package:ai_math_helper/services/image_import_service.dart';
+import 'package:ai_math_helper/services/authenticated_image_provider.dart';
 import 'package:ai_math_helper/view/notebook/add_problem_dialog.dart';
 import 'package:ai_math_helper/view/math_input/view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 
-class NotebookDetailView extends ConsumerWidget {
+class NotebookDetailView extends ConsumerStatefulWidget {
   final String notebookId;
 
   const NotebookDetailView({
@@ -15,10 +16,24 @@ class NotebookDetailView extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<NotebookDetailView> createState() => _NotebookDetailViewState();
+}
+
+class _NotebookDetailViewState extends ConsumerState<NotebookDetailView> {
+  @override
+  void initState() {
+    super.initState();
+    // Refresh notebook data when view is loaded
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(notebookModelProvider.notifier).refreshNotebook(widget.notebookId);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final notebookState = ref.watch(notebookModelProvider);
     final notebook = notebookState.notebooks
-        .where((n) => n.id == notebookId)
+        .where((n) => n.id == widget.notebookId)
         .firstOrNull;
 
     if (notebook == null) {
@@ -77,7 +92,12 @@ class NotebookDetailView extends ConsumerWidget {
       ),
       body: notebook.problems.isEmpty
           ? _buildEmptyState(context, ref, notebook)
-          : _buildProblemsList(context, ref, notebook),
+          : RefreshIndicator(
+              onRefresh: () async {
+                await ref.read(notebookModelProvider.notifier).refreshNotebook(widget.notebookId);
+              },
+              child: _buildProblemsList(context, ref, notebook),
+            ),
       floatingActionButton: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -204,7 +224,7 @@ class NotebookDetailView extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      problem.title,
+                      'Problem #${notebook.problems.indexOf(problem) + 1}',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
@@ -213,45 +233,38 @@ class NotebookDetailView extends ConsumerWidget {
                   _buildStatusChip(context, problem.status),
                 ],
               ),
-              if (problem.description != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  problem.description!,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+              if (problem.image != null) ...[
+                const SizedBox(height: 12),
+                Container(
+                  height: 120,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.outline,
+                    ),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: AuthenticatedImage(
+                    imageUrl: problem.image!.fileUrl,
+                    fit: BoxFit.cover,
+                    placeholder: const Icon(Icons.image, size: 40),
+                    errorWidget: const Icon(Icons.broken_image, size: 40),
                   ),
                 ),
-              ],
-              if (problem.imagePaths != null && problem.imagePaths!.isNotEmpty) ...[
+              ] else if (problem.scribbleData != null) ...[
                 const SizedBox(height: 12),
-                SizedBox(
-                  height: 80,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: problem.imagePaths!.length,
-                    itemBuilder: (context, imageIndex) {
-                      final imagePath = problem.imagePaths![imageIndex];
-                      return Container(
-                        margin: const EdgeInsets.only(right: 8),
-                        width: 80,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
-                          ),
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.file(
-                            File(imagePath),
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return const Icon(Icons.broken_image);
-                            },
-                          ),
-                        ),
-                      );
-                    },
+                Container(
+                  height: 120,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.outline,
+                    ),
+                  ),
+                  child: const Center(
+                    child: Icon(Icons.draw, size: 40),
                   ),
                 ),
               ],
@@ -381,9 +394,9 @@ class NotebookDetailView extends ConsumerWidget {
 
   Future<void> _importFromCamera(BuildContext context, WidgetRef ref, notebook) async {
     try {
-      final imagePaths = await ImageImportService.importFromCamera();
-      if (imagePaths.isNotEmpty) {
-        await _createProblemFromImages(context, ref, notebook, imagePaths);
+      final imageFiles = await ImageImportService.importFromCamera();
+      if (imageFiles.isNotEmpty) {
+        await _createProblemFromImages(context, ref, notebook, imageFiles);
       } else {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -405,9 +418,9 @@ class NotebookDetailView extends ConsumerWidget {
 
   Future<void> _importFromGallery(BuildContext context, WidgetRef ref, notebook) async {
     try {
-      final imagePaths = await ImageImportService.importFromGallery();
-      if (imagePaths.isNotEmpty) {
-        await _createProblemFromImages(context, ref, notebook, imagePaths);
+      final imageFiles = await ImageImportService.importFromGallery();
+      if (imageFiles.isNotEmpty) {
+        await _createProblemFromImages(context, ref, notebook, imageFiles);
       }
     } catch (e) {
       if (context.mounted) {
@@ -422,20 +435,73 @@ class NotebookDetailView extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     notebook,
-    List<String> imagePaths,
+    List<XFile> imageFiles,
   ) async {
-    final problemTitle = 'Math Problem ${notebook.problems.length + 1}';
+    // Show loading indicator
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+              ),
+              SizedBox(width: 16),
+              Text('Creating problem with images...'),
+            ],
+          ),
+          duration: Duration(seconds: 10),
+        ),
+      );
+    }
     
-    await ref.read(notebookModelProvider.notifier).addProblemToNotebook(
+    final result = await ref.read(notebookModelProvider.notifier).addProblemToNotebook(
       notebookId: notebook.id,
-      title: problemTitle,
-      imagePaths: imagePaths,
+      imageFiles: imageFiles,
     );
 
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Problem added successfully!')),
-      );
+      // Clear any existing snackbars
+      ScaffoldMessenger.of(context).clearSnackBars();
+      
+      if (result != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white),
+                const SizedBox(width: 8),
+                const Text('Problem added successfully!'),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      } else {
+        final notebookState = ref.read(notebookModelProvider);
+        final errorMessage = notebookState.errorMessage ?? 'Failed to create problem';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error, color: Colors.white),
+                const SizedBox(width: 8),
+                Expanded(child: Text(errorMessage)),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'Retry',
+              textColor: Colors.white,
+              onPressed: () => _createProblemFromImages(context, ref, notebook, imageFiles),
+            ),
+          ),
+        );
+      }
     }
   }
 
@@ -443,14 +509,68 @@ class NotebookDetailView extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => AddProblemDialog(
-        onProblemAdded: (title, description, tags, imagePaths) {
-          ref.read(notebookModelProvider.notifier).addProblemToNotebook(
+        onProblemAdded: (tags, imageFile) async {
+          // Show loading indicator
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Row(
+                children: [
+                  SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  ),
+                  SizedBox(width: 16),
+                  Text('Creating problem...'),
+                ],
+              ),
+              duration: Duration(seconds: 10),
+            ),
+          );
+
+          final imageFiles = imageFile != null ? [imageFile] : <XFile>[];
+          final result = await ref.read(notebookModelProvider.notifier).addProblemToNotebook(
             notebookId: notebook.id,
-            title: title,
-            description: description,
-            imagePaths: imagePaths,
+            imageFiles: imageFiles,
             tags: tags,
           );
+
+          if (context.mounted) {
+            // Clear any existing snackbars
+            ScaffoldMessenger.of(context).clearSnackBars();
+            
+            if (result != null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Row(
+                    children: [
+                      const Icon(Icons.check_circle, color: Colors.white),
+                      const SizedBox(width: 8),
+                      const Text('Problem added successfully!'),
+                    ],
+                  ),
+                  backgroundColor: Colors.green,
+                  duration: const Duration(seconds: 3),
+                ),
+              );
+            } else {
+              final notebookState = ref.read(notebookModelProvider);
+              final errorMessage = notebookState.errorMessage ?? 'Failed to create problem';
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Row(
+                    children: [
+                      const Icon(Icons.error, color: Colors.white),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text(errorMessage)),
+                    ],
+                  ),
+                  backgroundColor: Colors.red,
+                  duration: const Duration(seconds: 5),
+                ),
+              );
+            }
+          }
         },
       ),
     );
@@ -461,13 +581,12 @@ class NotebookDetailView extends ConsumerWidget {
       context: context,
       builder: (context) => AddProblemDialog(
         problem: problem,
-        onProblemAdded: (title, description, tags, imagePaths) {
+        onProblemAdded: (tags, imageFile) {
+          final imageFiles = imageFile != null ? [imageFile] : <XFile>[];
           ref.read(notebookModelProvider.notifier).updateProblem(
             notebookId: notebook.id,
             problemId: problem.id,
-            title: title,
-            description: description,
-            imagePaths: imagePaths,
+            imageFiles: imageFiles,
             tags: tags,
           );
         },
@@ -486,7 +605,7 @@ class NotebookDetailView extends ConsumerWidget {
       builder: (context) => AlertDialog(
         title: const Text('Delete Problem'),
         content: Text(
-          'Are you sure you want to delete "${problem.title}"? This action cannot be undone.',
+          'Are you sure you want to delete this problem? This action cannot be undone.',
         ),
         actions: [
           TextButton(

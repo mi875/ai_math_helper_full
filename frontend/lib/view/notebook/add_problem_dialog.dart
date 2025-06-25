@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:ai_math_helper/services/image_import_service.dart';
+import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
 class AddProblemDialog extends StatefulWidget {
-  final Function(String title, String? description, List<String> tags, List<String> imagePaths) onProblemAdded;
+  final Function(List<String> tags, XFile? imageFile) onProblemAdded;
   final dynamic problem; // For editing existing problem
 
   const AddProblemDialog({
@@ -17,28 +18,22 @@ class AddProblemDialog extends StatefulWidget {
 }
 
 class _AddProblemDialogState extends State<AddProblemDialog> {
-  final _titleController = TextEditingController();
-  final _descriptionController = TextEditingController();
   final _tagController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   final List<String> _tags = [];
-  final List<String> _imagePaths = [];
+  XFile? _selectedImageFile; // Single image file
 
   @override
   void initState() {
     super.initState();
     if (widget.problem != null) {
-      _titleController.text = widget.problem.title;
-      _descriptionController.text = widget.problem.description ?? '';
       _tags.addAll(widget.problem.tags ?? []);
-      _imagePaths.addAll(widget.problem.imagePaths ?? []);
+      // Note: For editing, existing image will be handled separately
     }
   }
 
   @override
   void dispose() {
-    _titleController.dispose();
-    _descriptionController.dispose();
     _tagController.dispose();
     super.dispose();
   }
@@ -57,34 +52,6 @@ class _AddProblemDialogState extends State<AddProblemDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              TextFormField(
-                controller: _titleController,
-                decoration: const InputDecoration(
-                  labelText: 'Problem Title',
-                  hintText: 'e.g., Quadratic Equation',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter a title';
-                  }
-                  return null;
-                },
-                autofocus: true,
-                textCapitalization: TextCapitalization.words,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _descriptionController,
-                decoration: const InputDecoration(
-                  labelText: 'Description (optional)',
-                  hintText: 'Brief description of the problem',
-                  border: OutlineInputBorder(),
-                ),
-                maxLines: 3,
-                textCapitalization: TextCapitalization.sentences,
-              ),
-              const SizedBox(height: 16),
               Text(
                 'Tags',
                 style: Theme.of(context).textTheme.titleMedium,
@@ -168,61 +135,49 @@ class _AddProblemDialogState extends State<AddProblemDialog> {
                   ),
                 ],
               ),
-              if (_imagePaths.isNotEmpty) ...[
+              if (_selectedImageFile != null) ...[
                 const SizedBox(height: 8),
-                SizedBox(
-                  height: 80,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: _imagePaths.length,
-                    itemBuilder: (context, index) {
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: Stack(
-                          children: [
-                            Container(
-                              width: 80,
-                              height: 80,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: Theme.of(context).colorScheme.outline,
-                                ),
-                              ),
-                              clipBehavior: Clip.antiAlias,
-                              child: Image.file(
-                                File(_imagePaths[index]),
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return const Icon(Icons.broken_image);
-                                },
-                              ),
-                            ),
-                            Positioned(
-                              top: 2,
-                              right: 2,
-                              child: GestureDetector(
-                                onTap: () => _removeImage(index),
-                                child: Container(
-                                  width: 20,
-                                  height: 20,
-                                  decoration: const BoxDecoration(
-                                    color: Colors.red,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(
-                                    Icons.close,
-                                    color: Colors.white,
-                                    size: 14,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
+                Stack(
+                  children: [
+                    Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: Theme.of(context).colorScheme.outline,
                         ),
-                      );
-                    },
-                  ),
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: Image.file(
+                        File(_selectedImageFile!.path),
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return const Icon(Icons.broken_image);
+                        },
+                      ),
+                    ),
+                    Positioned(
+                      top: 2,
+                      right: 2,
+                      child: GestureDetector(
+                        onTap: _removeImage,
+                        child: Container(
+                          width: 24,
+                          height: 24,
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.close,
+                            color: Colors.white,
+                            size: 16,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ],
@@ -253,41 +208,43 @@ class _AddProblemDialogState extends State<AddProblemDialog> {
   }
 
   Future<void> _importFromCamera() async {
-    final imagePaths = await ImageImportService.importFromCamera();
-    setState(() {
-      _imagePaths.addAll(imagePaths);
-    });
+    final imageFiles = await ImageImportService.importFromCamera();
+    if (imageFiles.isNotEmpty) {
+      setState(() {
+        _selectedImageFile = imageFiles.first;
+      });
+    }
   }
 
   Future<void> _importFromGallery() async {
-    final imagePaths = await ImageImportService.importFromGallery();
-    setState(() {
-      _imagePaths.addAll(imagePaths);
-    });
+    final imageFiles = await ImageImportService.importFromGallery();
+    if (imageFiles.isNotEmpty) {
+      setState(() {
+        _selectedImageFile = imageFiles.first;
+      });
+    }
   }
 
   Future<void> _scanDocument() async {
-    final imagePaths = await ImageImportService.scanDocument();
-    setState(() {
-      _imagePaths.addAll(imagePaths);
-    });
+    final imageFiles = await ImageImportService.scanDocument();
+    if (imageFiles.isNotEmpty) {
+      setState(() {
+        _selectedImageFile = imageFiles.first;
+      });
+    }
   }
 
-  void _removeImage(int index) {
+  void _removeImage() {
     setState(() {
-      _imagePaths.removeAt(index);
+      _selectedImageFile = null;
     });
   }
 
   void _saveProblem() {
     if (_formKey.currentState!.validate()) {
       widget.onProblemAdded(
-        _titleController.text.trim(),
-        _descriptionController.text.trim().isEmpty
-            ? null
-            : _descriptionController.text.trim(),
         _tags,
-        _imagePaths,
+        _selectedImageFile,
       );
       Navigator.of(context).pop();
     }

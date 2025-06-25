@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:ai_math_helper/data/notebook/data/notebook_data.dart';
 import 'package:ai_math_helper/data/notebook/data/math_problem.dart';
+import 'package:ai_math_helper/data/notebook/data/problem_image.dart';
 import 'package:ai_math_helper/data/notebook/data/ai_feedback.dart';
 import 'package:ai_math_helper/data/notebook/data/problem_status.dart';
 import 'package:ai_math_helper/services/api_service.dart';
@@ -8,6 +9,8 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:uuid/uuid.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path_helper;
+import 'package:image_picker/image_picker.dart';
+import 'package:flutter/foundation.dart';
 
 part 'notebook_model.g.dart';
 
@@ -64,13 +67,33 @@ class NotebookModel extends _$NotebookModel {
 
   // Parse problem data from API response
   MathProblem _parseProblemFromApi(Map<String, dynamic> data) {
+    // Parse images from the new API structure
+    final List<ProblemImage> images = [];
+    if (data['images'] is List) {
+      for (final imageData in data['images'] as List) {
+        if (imageData is Map<String, dynamic>) {
+          images.add(ProblemImage(
+            id: imageData['id'] ?? 0,
+            uid: imageData['uid'] ?? '',
+            originalFilename: imageData['originalFilename'] ?? '',
+            filename: imageData['filename'] ?? '',
+            fileUrl: imageData['fileUrl'] ?? '',
+            mimeType: imageData['mimeType'] ?? '',
+            fileSize: imageData['fileSize'] ?? 0,
+            width: imageData['width'],
+            height: imageData['height'],
+            displayOrder: imageData['displayOrder'] ?? 0,
+            createdAt: DateTime.tryParse(imageData['createdAt'] ?? '') ?? DateTime.now(),
+          ));
+        }
+      }
+    }
+    
     return MathProblem(
       id: data['uid'] ?? data['id'].toString(),
-      title: data['title'] ?? '',
-      description: data['description'],
       createdAt: DateTime.tryParse(data['createdAt'] ?? '') ?? DateTime.now(),
       updatedAt: DateTime.tryParse(data['updatedAt'] ?? '') ?? DateTime.now(),
-      imagePaths: List<String>.from(data['imagePaths'] ?? []),
+      image: images.isNotEmpty ? images.first : null,
       scribbleData: data['scribbleData'],
       status: _parseStatusFromString(data['status'] ?? 'unsolved'),
       tags: List<String>.from(data['tags'] ?? []),
@@ -183,52 +206,70 @@ class NotebookModel extends _$NotebookModel {
 
   Future<MathProblem?> addProblemToNotebook({
     required String notebookId,
-    required String title,
-    String? description,
-    List<String>? imagePaths,
+    List<XFile>? imageFiles,
     String? scribbleData,
     List<String>? tags,
   }) async {
     try {
+      // Set loading state
+      state = state.copyWith(isLoading: true, errorMessage: null);
+      
       final problemData = await ApiService.createProblem(
         notebookUid: notebookId,
-        title: title,
-        description: description,
-        imagePaths: imagePaths,
+        imageFiles: imageFiles,
         scribbleData: scribbleData,
         tags: tags,
       );
 
       if (problemData != null) {
+        // Instead of just updating local state, reload the complete notebook from server
+        // to ensure we have accurate data including properly uploaded images
+        await _reloadNotebook(notebookId);
+        
         final problem = _parseProblemFromApi(problemData);
+        state = state.copyWith(isLoading: false);
+        return problem;
+      } else {
+        state = state.copyWith(
+          isLoading: false,
+          errorMessage: 'Failed to create problem. Please try again.',
+        );
+        return null;
+      }
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'Failed to create problem: $e',
+      );
+      return null;
+    }
+  }
+
+  // Helper method to reload a specific notebook from the server
+  Future<void> _reloadNotebook(String notebookId) async {
+    try {
+      final notebookData = await ApiService.getNotebook(notebookId);
+      if (notebookData != null) {
+        final updatedNotebook = _parseNotebookFromApi(notebookData);
         
         final notebooks = state.notebooks.map((notebook) {
           if (notebook.id == notebookId) {
-            final updatedProblems = [...notebook.problems, problem];
-            return notebook.copyWith(
-              problems: updatedProblems,
-              updatedAt: DateTime.now(),
-            );
+            return updatedNotebook;
           }
           return notebook;
         }).toList();
-
+        
         state = state.copyWith(notebooks: notebooks);
-        return problem;
       }
-      return null;
     } catch (e) {
-      state = state.copyWith(errorMessage: 'Failed to create problem: $e');
-      return null;
+      debugPrint('Error reloading notebook: $e');
     }
   }
 
   Future<bool> updateProblem({
     required String notebookId,
     required String problemId,
-    String? title,
-    String? description,
-    List<String>? imagePaths,
+    List<XFile>? imageFiles,
     String? scribbleData,
     ProblemStatus? status,
     List<String>? tags,
@@ -236,9 +277,7 @@ class NotebookModel extends _$NotebookModel {
     try {
       final updatedData = await ApiService.updateProblem(
         problemUid: problemId,
-        title: title,
-        description: description,
-        imagePaths: imagePaths,
+        newImageFiles: imageFiles,
         scribbleData: scribbleData,
         status: status != null ? _statusToString(status) : null,
         tags: tags,
@@ -366,6 +405,22 @@ class NotebookModel extends _$NotebookModel {
       return state.notebooks.firstWhere((notebook) => notebook.id == notebookId);
     } catch (e) {
       return null;
+    }
+  }
+
+  // Public method to refresh a specific notebook
+  Future<bool> refreshNotebook(String notebookId) async {
+    try {
+      state = state.copyWith(isLoading: true, errorMessage: null);
+      await _reloadNotebook(notebookId);
+      state = state.copyWith(isLoading: false);
+      return true;
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'Failed to refresh notebook: $e',
+      );
+      return false;
     }
   }
 

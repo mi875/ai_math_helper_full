@@ -7,18 +7,19 @@ import crypto from 'crypto';
 import heicConvert from 'heic-convert';
 
 // File upload configuration
-const UPLOAD_DIR = './uploads/profile-images';
+const PROFILE_UPLOAD_DIR = './uploads/profile-images';
+const PROBLEM_UPLOAD_DIR = './uploads/problem-images';
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB (increased for HEIC files which can be larger)
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif'];
 const MAX_DIMENSIONS = { width: 1024, height: 1024 };
 const THUMBNAIL_SIZE = { width: 200, height: 200 };
 
 // Ensure upload directory exists
-async function ensureUploadDir() {
+async function ensureUploadDir(uploadDir: string) {
   try {
-    await fs.access(UPLOAD_DIR);
+    await fs.access(uploadDir);
   } catch {
-    await fs.mkdir(UPLOAD_DIR, { recursive: true });
+    await fs.mkdir(uploadDir, { recursive: true });
   }
 }
 
@@ -86,7 +87,7 @@ export async function processProfileImage(
   filename: string,
   mimeType?: string
 ): Promise<{ processedPath: string; thumbnailPath: string; metadata: any }> {
-  await ensureUploadDir();
+  await ensureUploadDir(PROFILE_UPLOAD_DIR);
 
   const fileId = crypto.randomUUID();
   const extension = path.extname(filename).toLowerCase();
@@ -103,8 +104,8 @@ export async function processProfileImage(
   }
   
   const baseFilename = `${fileId}_${processedFilename}`;
-  const processedPath = path.join(UPLOAD_DIR, `processed_${baseFilename}`);
-  const thumbnailPath = path.join(UPLOAD_DIR, `thumb_${baseFilename}`);
+  const processedPath = path.join(PROFILE_UPLOAD_DIR, `processed_${baseFilename}`);
+  const thumbnailPath = path.join(PROFILE_UPLOAD_DIR, `thumb_${baseFilename}`);
 
   try {
     // Get image metadata and validate dimensions
@@ -138,6 +139,58 @@ export async function processProfileImage(
     try {
       await fs.unlink(processedPath).catch(() => {});
       await fs.unlink(thumbnailPath).catch(() => {});
+    } catch {}
+    throw error;
+  }
+}
+
+// Problem image processing function
+export async function processProblemImage(
+  inputBuffer: Buffer,
+  filename: string,
+  mimeType?: string
+): Promise<{ processedPath: string; metadata: any }> {
+  await ensureUploadDir(PROBLEM_UPLOAD_DIR);
+
+  const fileId = crypto.randomUUID();
+  const extension = path.extname(filename).toLowerCase();
+  
+  // Check if we need to convert HEIC to JPEG
+  let processBuffer = inputBuffer;
+  let processedFilename = filename;
+  
+  if (extension === '.heic' || extension === '.heif' || mimeType === 'image/heic' || mimeType === 'image/heif') {
+    console.log('Converting HEIC/HEIF image to JPEG...');
+    processBuffer = await convertHeicToJpeg(inputBuffer);
+    // Change filename extension to .jpg
+    processedFilename = filename.replace(/\.(heic|heif)$/i, '.jpg');
+  }
+  
+  const baseFilename = `${fileId}_${processedFilename}`;
+  const processedPath = path.join(PROBLEM_UPLOAD_DIR, `processed_${baseFilename}`);
+
+  try {
+    // Get image metadata and validate dimensions
+    const metadata = await sharp(processBuffer).metadata();
+    
+    if (!metadata.width || !metadata.height) {
+      throw new Error('Invalid image: Unable to determine dimensions');
+    }
+
+    // Process main image (resize if too large, optimize)
+    await sharp(processBuffer)
+      .resize(MAX_DIMENSIONS.width, MAX_DIMENSIONS.height, {
+        fit: 'inside',
+        withoutEnlargement: true,
+      })
+      .jpeg({ quality: 85, progressive: true })
+      .toFile(processedPath);
+
+    return { processedPath, metadata };
+  } catch (error) {
+    // Clean up files if processing failed
+    try {
+      await fs.unlink(processedPath).catch(() => {});
     } catch {}
     throw error;
   }
@@ -199,6 +252,80 @@ export const profileImageUploadMiddleware = () => {
   };
 };
 
+// Problem image upload middleware
+export const problemImageUploadMiddleware = () => {
+  return async (c: Context, next: Next) => {
+    try {
+      const body = await c.req.parseBody();
+      const files = body['images'] as File | File[];
+      
+      if (!files) {
+        throw new HTTPException(400, { message: 'No images field found in form data' });
+      }
+
+      // Convert single file to array for consistent processing
+      const fileArray = Array.isArray(files) ? files : [files];
+      
+      if (fileArray.length === 0) {
+        throw new HTTPException(400, { message: 'At least one image must be provided' });
+      }
+
+      if (fileArray.length > 10) {
+        throw new HTTPException(400, { message: 'Maximum 10 images allowed per problem' });
+      }
+
+      // Validate and process each file
+      const processedFiles = [];
+      
+      for (const file of fileArray) {
+        if (!(file instanceof File)) {
+          throw new HTTPException(400, { message: 'All images must be valid files' });
+        }
+
+        // Special handling for HEIC files - browsers often don't set correct MIME type
+        let mimeType = file.type;
+        const extension = path.extname(file.name).toLowerCase();
+        if (['.heic', '.heif'].includes(extension) && (!mimeType || mimeType === 'application/octet-stream')) {
+          mimeType = 'image/heic';
+        }
+
+        // Validate file
+        const validation = validateImageFile({
+          originalname: file.name,
+          mimetype: mimeType,
+          size: file.size,
+        });
+
+        if (!validation.isValid) {
+          throw new HTTPException(400, { message: `Invalid file ${file.name}: ${validation.error}` });
+        }
+
+        // Convert File to Buffer
+        const buffer = await file.arrayBuffer();
+        const fileBuffer = Buffer.from(buffer);
+
+        processedFiles.push({
+          originalname: file.name,
+          mimetype: mimeType,
+          size: file.size,
+          buffer: fileBuffer,
+        });
+      }
+
+      // Store file data in context for the handler
+      c.set('uploadedFiles', processedFiles);
+
+      await next();
+    } catch (error) {
+      console.error('File upload error:', error);
+      if (error instanceof HTTPException) {
+        throw error;
+      }
+      throw new HTTPException(500, { message: 'File upload failed' });
+    }
+  };
+};
+
 // Helper function to delete old profile images
 export async function deleteProfileImage(imagePath: string): Promise<void> {
   try {
@@ -212,6 +339,20 @@ export async function deleteProfileImage(imagePath: string): Promise<void> {
   } catch (error) {
     console.error('Error deleting profile image:', error);
     // Don't throw error - image deletion failure shouldn't break the flow
+  }
+}
+
+// Helper function to delete problem images
+export async function deleteProblemImages(imagePaths: string[]): Promise<void> {
+  for (const imagePath of imagePaths) {
+    try {
+      if (imagePath && imagePath.startsWith('./uploads/')) {
+        await fs.unlink(imagePath);
+      }
+    } catch (error) {
+      console.error('Error deleting problem image:', error);
+      // Don't throw error - image deletion failure shouldn't break the flow
+    }
   }
 }
 
@@ -237,7 +378,46 @@ export const serveProfileImage = () => {
         throw new HTTPException(400, { message: 'Invalid filename' });
       }
 
-      const filePath = path.join(UPLOAD_DIR, filename);
+      const filePath = path.join(PROFILE_UPLOAD_DIR, filename);
+      
+      try {
+        await fs.access(filePath);
+        const fileBuffer = await fs.readFile(filePath);
+        
+        // Set appropriate headers
+        c.header('Content-Type', 'image/jpeg');
+        c.header('Cache-Control', 'public, max-age=86400'); // 24 hours cache
+        c.header('Content-Length', fileBuffer.length.toString());
+        
+        return c.body(fileBuffer);
+      } catch (error) {
+        throw new HTTPException(404, { message: 'Image not found' });
+      }
+    } catch (error) {
+      console.error('Error serving image:', error);
+      if (error instanceof HTTPException) {
+        throw error;
+      }
+      throw new HTTPException(500, { message: 'Error serving image' });
+    }
+  };
+};
+
+// Problem image serving middleware
+export const serveProblemImage = () => {
+  return async (c: Context) => {
+    try {
+      const filename = c.req.param('filename');
+      if (!filename) {
+        throw new HTTPException(400, { message: 'Filename is required' });
+      }
+
+      // Validate filename to prevent directory traversal
+      if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+        throw new HTTPException(400, { message: 'Invalid filename' });
+      }
+
+      const filePath = path.join(PROBLEM_UPLOAD_DIR, filename);
       
       try {
         await fs.access(filePath);

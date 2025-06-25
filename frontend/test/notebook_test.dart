@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ai_math_helper/data/notebook/data/notebook_data.dart';
 import 'package:ai_math_helper/data/notebook/data/math_problem.dart';
+import 'package:ai_math_helper/data/notebook/data/problem_image.dart';
 import 'package:ai_math_helper/data/notebook/data/problem_status.dart';
 
 void main() {
@@ -41,15 +42,12 @@ void main() {
     test('should create a math problem with default values', () {
       final problem = MathProblem(
         id: 'problem-id',
-        title: 'Quadratic Equation',
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
 
       expect(problem.id, 'problem-id');
-      expect(problem.title, 'Quadratic Equation');
-      expect(problem.description, null);
-      expect(problem.imagePaths, null);
+      expect(problem.image, null);
       expect(problem.scribbleData, null);
       expect(problem.status, ProblemStatus.unsolved);
       expect(problem.tags, []);
@@ -58,22 +56,43 @@ void main() {
 
     test('should create a math problem with custom values', () {
       final now = DateTime.now();
+      final testImages = [
+        ProblemImage(
+          id: 1,
+          uid: 'img-1',
+          originalFilename: 'test1.jpg',
+          filename: 'test1.jpg',
+          fileUrl: 'https://example.com/test1.jpg',
+          mimeType: 'image/jpeg',
+          fileSize: 12345,
+          displayOrder: 0,
+          createdAt: now,
+        ),
+        ProblemImage(
+          id: 2,
+          uid: 'img-2',
+          originalFilename: 'test2.jpg',
+          filename: 'test2.jpg',
+          fileUrl: 'https://example.com/test2.jpg',
+          mimeType: 'image/jpeg',
+          fileSize: 67890,
+          displayOrder: 1,
+          createdAt: now,
+        ),
+      ];
+      
       final problem = MathProblem(
         id: 'problem-id',
-        title: 'Linear Equations',
-        description: 'Solve for x',
         createdAt: now,
         updatedAt: now,
-        imagePaths: ['path1.jpg', 'path2.jpg'],
+        image: testImages.first,
         scribbleData: 'scribble-data',
         status: ProblemStatus.inProgress,
         tags: ['algebra', 'linear'],
       );
 
       expect(problem.id, 'problem-id');
-      expect(problem.title, 'Linear Equations');
-      expect(problem.description, 'Solve for x');
-      expect(problem.imagePaths, ['path1.jpg', 'path2.jpg']);
+      expect(problem.image?.fileUrl, 'https://example.com/test1.jpg');
       expect(problem.scribbleData, 'scribble-data');
       expect(problem.status, ProblemStatus.inProgress);
       expect(problem.tags, ['algebra', 'linear']);
@@ -130,19 +149,16 @@ void main() {
       final now = DateTime.now();
       final original = MathProblem(
         id: 'problem-id',
-        title: 'Original Problem',
         createdAt: now,
         updatedAt: now,
       );
 
       final updated = original.copyWith(
-        title: 'Updated Problem',
         status: ProblemStatus.solved,
         tags: ['geometry'],
       );
 
       expect(updated.id, 'problem-id');
-      expect(updated.title, 'Updated Problem');
       expect(updated.status, ProblemStatus.solved);
       expect(updated.tags, ['geometry']);
       expect(updated.createdAt, now);

@@ -104,3 +104,7 @@ Required in backend/.env:
 - Frontend: Uses firebase_options.dart for initialization
 - Backend: Uses credential.json for admin SDK
 - Authentication handled via Firebase Auth tokens
+
+### Don't run these commands
+- pnpm run dev
+- flutter run

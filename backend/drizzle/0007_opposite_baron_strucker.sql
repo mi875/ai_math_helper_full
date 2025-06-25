@@ -1,0 +1,1 @@
+ALTER TABLE "math_problems" ALTER COLUMN "title" DROP NOT NULL;

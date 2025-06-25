@@ -61,7 +61,7 @@ class ImageImportService {
     debugPrint('========================');
   }
 
-  static Future<List<String>> importFromCamera() async {
+  static Future<List<XFile>> importFromCamera() async {
     try {
       final XFile? image = await _picker.pickImage(
         source: ImageSource.camera,
@@ -69,10 +69,7 @@ class ImageImportService {
       );
       
       if (image != null) {
-        final savedPath = await _saveImageToAppDirectory(File(image.path));
-        if (savedPath != null) {
-          return [savedPath];
-        }
+        return [image];
       }
       
       return [];
@@ -82,44 +79,32 @@ class ImageImportService {
     }
   }
 
-  static Future<List<String>> importFromGallery() async {
+  static Future<List<XFile>> importFromGallery() async {
     try {
-      final List<String> imagePaths = [];
-      
       // Allow multiple image selection
       final List<XFile> images = await _picker.pickMultiImage(
         imageQuality: 85,
       );
       
-      for (final image in images) {
-        final savedPath = await _saveImageToAppDirectory(File(image.path));
-        if (savedPath != null) {
-          imagePaths.add(savedPath);
-        }
-      }
-      
-      return imagePaths;
+      return images;
     } catch (e) {
       debugPrint('Error importing from gallery: $e');
       return [];
     }
   }
 
-  static Future<List<String>> scanDocument() async {
+  static Future<List<XFile>> scanDocument() async {
     try {
       final scannedDocs = await FlutterDocScanner().getScanDocuments();
       
       if (scannedDocs != null && scannedDocs.isNotEmpty) {
-        final List<String> imagePaths = [];
+        final List<XFile> xFiles = [];
         
         for (final docPath in scannedDocs) {
-          final savedPath = await _saveImageToAppDirectory(File(docPath));
-          if (savedPath != null) {
-            imagePaths.add(savedPath);
-          }
+          xFiles.add(XFile(docPath));
         }
         
-        return imagePaths;
+        return xFiles;
       }
       
       return [];
@@ -129,42 +114,36 @@ class ImageImportService {
     }
   }
 
-  static Future<String?> importSingleFromCamera() async {
+  static Future<XFile?> importSingleFromCamera() async {
     try {
       final XFile? image = await _picker.pickImage(
         source: ImageSource.camera,
         imageQuality: 85,
       );
       
-      if (image != null) {
-        return await _saveImageToAppDirectory(File(image.path));
-      }
-      
-      return null;
+      return image;
     } catch (e) {
       debugPrint('Error importing single image from camera: $e');
       return null;
     }
   }
 
-  static Future<String?> importSingleFromGallery() async {
+  static Future<XFile?> importSingleFromGallery() async {
     try {
       final XFile? image = await _picker.pickImage(
         source: ImageSource.gallery,
         imageQuality: 85,
       );
       
-      if (image != null) {
-        return await _saveImageToAppDirectory(File(image.path));
-      }
-      
-      return null;
+      return image;
     } catch (e) {
       debugPrint('Error importing single image from gallery: $e');
       return null;
     }
   }
 
+  // DEPRECATED: Images are now uploaded directly to server
+  @Deprecated('Use XFile objects directly instead of saving to local storage')
   static Future<String?> _saveImageToAppDirectory(File imageFile) async {
     try {
       final directory = await getApplicationDocumentsDirectory();

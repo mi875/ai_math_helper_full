@@ -1,6 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'ai_feedback.dart';
 import 'problem_status.dart';
+import 'problem_image.dart';
 
 part 'math_problem.freezed.dart';
 part 'math_problem.g.dart';
@@ -9,11 +10,9 @@ part 'math_problem.g.dart';
 abstract class MathProblem with _$MathProblem {
   const factory MathProblem({
     required String id,
-    required String title,
-    String? description,
     required DateTime createdAt,
     required DateTime updatedAt,
-    List<String>? imagePaths,
+    ProblemImage? image,
     String? scribbleData,
     @Default([]) List<AiFeedback> aiFeedbacks,
     @Default(ProblemStatus.unsolved) ProblemStatus status,

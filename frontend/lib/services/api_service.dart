@@ -365,27 +365,137 @@ class ApiService {
     }
   }
 
+  // Problem Image Management
+  static Future<List<Map<String, dynamic>>?> uploadProblemImages(List<XFile> imageFiles, String problemId) async {
+    try {
+      final token = await _getAuthToken();
+      if (token == null) return null;
+
+      if (imageFiles.isEmpty) {
+        return [];
+      }
+
+      if (imageFiles.length > 10) {
+        debugPrint('Too many images: ${imageFiles.length} (max 10)');
+        return null;
+      }
+
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/api/problems/images/upload'),
+      );
+
+      request.headers['Authorization'] = 'Bearer $token';
+
+      // Add problemId field
+      request.fields['problemId'] = problemId;
+
+      // Add each image file
+      for (int i = 0; i < imageFiles.length; i++) {
+        final imageFile = imageFiles[i];
+        
+        // Validate file size (10MB limit as per backend)
+        final file = File(imageFile.path);
+        final fileSize = await file.length();
+        const maxSizeBytes = 10 * 1024 * 1024; // 10MB
+
+        if (fileSize > maxSizeBytes) {
+          debugPrint('File too large: ${fileSize / (1024 * 1024)}MB (max 10MB)');
+          return null;
+        }
+
+        // Detect MIME type from file
+        String? mimeType = lookupMimeType(imageFile.path);
+
+        // Validate and set MIME type for supported formats
+        const supportedFormats = [
+          'image/jpeg',
+          'image/png',
+          'image/gif',
+          'image/webp',
+        ];
+
+        if (mimeType == null || !supportedFormats.contains(mimeType)) {
+          final extension = imageFile.path.toLowerCase().split('.').last;
+          switch (extension) {
+            case 'jpg':
+            case 'jpeg':
+              mimeType = 'image/jpeg';
+              break;
+            case 'png':
+              mimeType = 'image/png';
+              break;
+            case 'gif':
+              mimeType = 'image/gif';
+              break;
+            case 'webp':
+              mimeType = 'image/webp';
+              break;
+            case 'heic':
+            case 'heif':
+              mimeType = 'image/heic';
+              break;
+            default:
+              debugPrint('Unsupported image format: $extension');
+              return null;
+          }
+        }
+
+        // Add the image file with correct MIME type
+        final multipartFile = await http.MultipartFile.fromPath(
+          'images', // Backend expects 'images' field name
+          imageFile.path,
+          contentType: MediaType.parse(mimeType),
+        );
+        request.files.add(multipartFile);
+      }
+
+      debugPrint('Uploading ${imageFiles.length} problem images');
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 201) {
+        final data = json.decode(utf8.decode(response.bodyBytes));
+        debugPrint('Problem images uploaded successfully');
+        final images = List<Map<String, dynamic>>.from(data['data']['images']);
+        return images;
+      } else {
+        debugPrint('Failed to upload problem images: ${response.statusCode}');
+        debugPrint('Response: ${response.body}');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('Error uploading problem images: $e');
+      return null;
+    }
+  }
+
   // Math Problem Management
   static Future<Map<String, dynamic>?> createProblem({
     required String notebookUid,
-    required String title,
+    String? title,
     String? description,
-    List<String>? imagePaths,
+    List<XFile>? imageFiles,
     String? scribbleData,
     List<String>? tags,
   }) async {
     try {
       final token = await _getAuthToken();
-      if (token == null) return null;
+      if (token == null) {
+        debugPrint('Error: No authentication token available');
+        return null;
+      }
 
+      // First create the problem without images
       final body = {
-        'title': title,
+        if (title != null) 'title': title,
         if (description != null) 'description': description,
-        if (imagePaths != null) 'imagePaths': imagePaths,
         if (scribbleData != null) 'scribbleData': scribbleData,
         if (tags != null) 'tags': tags,
       };
 
+      debugPrint('Creating problem with ${title ?? 'no title'}');
       final response = await http.post(
         Uri.parse('$baseUrl/api/notebooks/$notebookUid/problems'),
         headers: _getHeaders(token: token),
@@ -394,9 +504,32 @@ class ApiService {
 
       if (response.statusCode == 201) {
         final data = json.decode(utf8.decode(response.bodyBytes));
-        return data['data'];
+        final problemData = data['data'];
+        debugPrint('Problem created successfully: ${problemData['uid']}');
+        
+        // Upload images if provided
+        if (imageFiles != null && imageFiles.isNotEmpty) {
+          debugPrint('Uploading ${imageFiles.length} images for problem');
+          final uploadedImages = await uploadProblemImages(imageFiles, problemData['uid']);
+          if (uploadedImages != null) {
+            // Add uploaded images to the problem data
+            problemData['images'] = uploadedImages;
+            debugPrint('Images uploaded successfully');
+          } else {
+            debugPrint('Warning: Failed to upload images, but problem was created');
+            // Problem was created successfully, but images failed
+            // Still return the problem data, but with empty images
+            problemData['images'] = [];
+          }
+        } else {
+          // No images to upload
+          problemData['images'] = [];
+        }
+        
+        return problemData;
       } else {
         debugPrint('Failed to create problem: ${response.statusCode}');
+        debugPrint('Response: ${response.body}');
         return null;
       }
     } catch (e) {
@@ -409,7 +542,7 @@ class ApiService {
     required String problemUid,
     String? title,
     String? description,
-    List<String>? imagePaths,
+    List<XFile>? newImageFiles,
     String? scribbleData,
     String? status,
     List<String>? tags,
@@ -418,10 +551,10 @@ class ApiService {
       final token = await _getAuthToken();
       if (token == null) return null;
 
+      // Update the problem (without images)
       final body = <String, dynamic>{};
       if (title != null) body['title'] = title;
       if (description != null) body['description'] = description;
-      if (imagePaths != null) body['imagePaths'] = imagePaths;
       if (scribbleData != null) body['scribbleData'] = scribbleData;
       if (status != null) body['status'] = status;
       if (tags != null) body['tags'] = tags;
@@ -434,9 +567,22 @@ class ApiService {
 
       if (response.statusCode == 200) {
         final data = json.decode(utf8.decode(response.bodyBytes));
-        return data['data'];
+        final problemData = data['data'];
+        
+        // Upload new images if provided
+        if (newImageFiles != null && newImageFiles.isNotEmpty) {
+          final uploadedImages = await uploadProblemImages(newImageFiles, problemUid);
+          if (uploadedImages != null) {
+            // Add new images to existing ones
+            final existingImages = List<Map<String, dynamic>>.from(problemData['images'] ?? []);
+            problemData['images'] = [...existingImages, ...uploadedImages];
+          }
+        }
+        
+        return problemData;
       } else {
         debugPrint('Failed to update problem: ${response.statusCode}');
+        debugPrint('Response: ${response.body}');
         return null;
       }
     } catch (e) {

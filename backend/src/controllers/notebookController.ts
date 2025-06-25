@@ -1,8 +1,10 @@
 import type { Context } from 'hono';
 import { db } from '../db/client.js';
-import { notebooks, mathProblems, aiFeedbacks, users } from '../db/schema.js';
+import { notebooks, mathProblems, users, problemImages } from '../db/schema.js';
 import { eq, and, desc } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
+import { processProblemImage, deleteProblemImages, generateImageUrl } from '../middleware/fileUploadMiddleware.js';
+import path from 'path';
 
 // Helper function to ensure user exists in database
 async function ensureUserExists(user: { uid: string; email?: string }) {
@@ -82,15 +84,40 @@ export const notebookController = {
         ))
         .orderBy(desc(mathProblems.updatedAt));
 
+      // Get images for all problems
+      const problemsWithImages = await Promise.all(
+        problems.map(async (problem) => {
+          const images = await db
+            .select()
+            .from(problemImages)
+            .where(eq(problemImages.problemId, problem.id))
+            .orderBy(problemImages.displayOrder);
+
+          return {
+            ...problem,
+            images: images.map(img => ({
+              id: img.id,
+              uid: img.uid,
+              originalFilename: img.originalFilename,
+              filename: img.filename,
+              fileUrl: img.fileUrl,
+              mimeType: img.mimeType,
+              fileSize: img.fileSize,
+              width: img.width,
+              height: img.height,
+              displayOrder: img.displayOrder,
+              createdAt: img.createdAt,
+            })),
+            tags: problem.tags ? JSON.parse(problem.tags) : [],
+          };
+        })
+      );
+
       return c.json({
         success: true,
         data: {
           ...notebook[0],
-          problems: problems.map(problem => ({
-            ...problem,
-            imagePaths: problem.imagePaths ? JSON.parse(problem.imagePaths) : [],
-            tags: problem.tags ? JSON.parse(problem.tags) : [],
-          }))
+          problems: problemsWithImages
         }
       });
     } catch (error) {
@@ -202,16 +229,38 @@ export const notebookController = {
         }, 404);
       }
 
-      // Delete associated AI feedbacks for all problems in this notebook
-      const problemIds = await db
+      // Get all problems in this notebook
+      const problems = await db
         .select({ id: mathProblems.id })
         .from(mathProblems)
         .where(eq(mathProblems.notebookId, notebook[0].id));
 
-      if (problemIds.length > 0) {
-        await db
-          .delete(aiFeedbacks)
-          .where(eq(aiFeedbacks.problemId, problemIds[0].id));
+      if (problems.length > 0) {
+        const problemIds = problems.map(p => p.id);
+        
+        // Get all images for all problems in this notebook to delete files
+        const allImages: string[] = [];
+        for (const problemId of problemIds) {
+          const images = await db
+            .select()
+            .from(problemImages)
+            .where(eq(problemImages.problemId, problemId));
+          
+          allImages.push(...images.map(img => img.filePath));
+        }
+
+        // Delete image files from disk
+        if (allImages.length > 0) {
+          await deleteProblemImages(allImages);
+        }
+
+        // Delete all problem images for problems in this notebook
+        for (const problemId of problemIds) {
+          await db
+            .delete(problemImages)
+            .where(eq(problemImages.problemId, problemId));
+        }
+
       }
 
       // Delete all problems in the notebook
@@ -246,7 +295,7 @@ export const notebookController = {
       const user = c.get('user');
       const userId = user.uid;
       const notebookUid = c.req.param('uid');
-      const { title, description, imagePaths, scribbleData, tags } = await c.req.json();
+      const { title, description, scribbleData, tags } = await c.req.json();
 
       // First find the notebook
       const notebook = await db
@@ -273,7 +322,6 @@ export const notebookController = {
           userId,
           title,
           description,
-          imagePaths: imagePaths ? JSON.stringify(imagePaths) : null,
           scribbleData,
           tags: tags ? JSON.stringify(tags) : null,
         })
@@ -283,7 +331,7 @@ export const notebookController = {
         success: true,
         data: {
           ...newProblem[0],
-          imagePaths: newProblem[0].imagePaths ? JSON.parse(newProblem[0].imagePaths) : [],
+          images: [], // Empty images array for new problem
           tags: newProblem[0].tags ? JSON.parse(newProblem[0].tags) : [],
         }
       }, 201);
@@ -302,14 +350,13 @@ export const notebookController = {
       const user = c.get('user');
       const userId = user.uid;
       const problemUid = c.req.param('problemUid');
-      const { title, description, imagePaths, scribbleData, status, tags } = await c.req.json();
+      const { title, description, scribbleData, status, tags } = await c.req.json();
 
       const updatedProblem = await db
         .update(mathProblems)
         .set({
           title,
           description,
-          imagePaths: imagePaths ? JSON.stringify(imagePaths) : null,
           scribbleData,
           status,
           tags: tags ? JSON.stringify(tags) : null,
@@ -328,11 +375,30 @@ export const notebookController = {
         }, 404);
       }
 
+      // Get updated images for the problem
+      const images = await db
+        .select()
+        .from(problemImages)
+        .where(eq(problemImages.problemId, updatedProblem[0].id))
+        .orderBy(problemImages.displayOrder);
+
       return c.json({
         success: true,
         data: {
           ...updatedProblem[0],
-          imagePaths: updatedProblem[0].imagePaths ? JSON.parse(updatedProblem[0].imagePaths) : [],
+          images: images.map(img => ({
+            id: img.id,
+            uid: img.uid,
+            originalFilename: img.originalFilename,
+            filename: img.filename,
+            fileUrl: img.fileUrl,
+            mimeType: img.mimeType,
+            fileSize: img.fileSize,
+            width: img.width,
+            height: img.height,
+            displayOrder: img.displayOrder,
+            createdAt: img.createdAt,
+          })),
           tags: updatedProblem[0].tags ? JSON.parse(updatedProblem[0].tags) : [],
         }
       });
@@ -369,10 +435,23 @@ export const notebookController = {
         }, 404);
       }
 
-      // Delete associated AI feedbacks
+      // Get all images for the problem to delete files
+      const images = await db
+        .select()
+        .from(problemImages)
+        .where(eq(problemImages.problemId, problem[0].id));
+
+      // Delete image files from disk
+      if (images.length > 0) {
+        const imagePaths = images.map(img => img.filePath);
+        await deleteProblemImages(imagePaths);
+      }
+
+      // Delete associated problem images
       await db
-        .delete(aiFeedbacks)
-        .where(eq(aiFeedbacks.problemId, problem[0].id));
+        .delete(problemImages)
+        .where(eq(problemImages.problemId, problem[0].id));
+
 
       // Delete the problem
       await db
@@ -419,21 +498,152 @@ export const notebookController = {
         }, 404);
       }
 
-      const feedbacks = await db
-        .select()
-        .from(aiFeedbacks)
-        .where(eq(aiFeedbacks.problemId, problem[0].id))
-        .orderBy(desc(aiFeedbacks.createdAt));
-
       return c.json({
         success: true,
-        data: feedbacks
+        data: []
       });
     } catch (error) {
       console.error('Error fetching problem feedbacks:', error);
       return c.json({
         success: false,
         error: 'Failed to fetch problem feedbacks'
+      }, 500);
+    }
+  },
+
+  // Upload images for a problem
+  async uploadProblemImages(c: Context) {
+    try {
+      const user = c.get('user');
+      const userId = user.uid;
+      const uploadedFiles = c.get('uploadedFiles') as any[];
+      const { problemId } = await c.req.parseBody() as { problemId?: string };
+      
+      if (!uploadedFiles || uploadedFiles.length === 0) {
+        return c.json({
+          success: false,
+          error: 'No files uploaded'
+        }, 400);
+      }
+
+      if (!problemId) {
+        return c.json({
+          success: false,
+          error: 'Problem ID is required'
+        }, 400);
+      }
+
+      // Verify problem exists and belongs to user
+      const problem = await db
+        .select({ id: mathProblems.id })
+        .from(mathProblems)
+        .where(and(
+          eq(mathProblems.uid, problemId),
+          eq(mathProblems.userId, userId)
+        ))
+        .limit(1);
+
+      if (problem.length === 0) {
+        return c.json({
+          success: false,
+          error: 'Problem not found'
+        }, 404);
+      }
+
+      // Get current max display order for this problem
+      const maxOrderResult = await db
+        .select()
+        .from(problemImages)
+        .where(eq(problemImages.problemId, problem[0].id))
+        .orderBy(desc(problemImages.displayOrder))
+        .limit(1);
+
+      let nextDisplayOrder = maxOrderResult.length > 0 ? (maxOrderResult[0].displayOrder || 0) + 1 : 0;
+
+      // Process each uploaded file
+      const savedImages: any[] = [];
+      const processedImagePaths: string[] = [];
+      
+      for (const file of uploadedFiles) {
+        try {
+          const { processedPath, metadata } = await processProblemImage(
+            file.buffer,
+            file.originalname,
+            file.mimetype
+          );
+          
+          processedImagePaths.push(processedPath);
+          
+          // Generate URL for the processed image
+          const baseUrl = new URL(c.req.url).origin;
+          const fileName = path.basename(processedPath);
+          const imageUrl = `${baseUrl}/api/files/problem-images/${fileName}`;
+          
+          // Save image record to database
+          const imageRecord = await db
+            .insert(problemImages)
+            .values({
+              uid: randomUUID(),
+              problemId: problem[0].id,
+              userId,
+              originalFilename: file.originalname,
+              filename: fileName,
+              filePath: processedPath,
+              fileUrl: imageUrl,
+              mimeType: file.mimetype,
+              fileSize: file.size,
+              width: metadata.width || null,
+              height: metadata.height || null,
+              displayOrder: nextDisplayOrder++,
+            })
+            .returning();
+
+          savedImages.push({
+            id: imageRecord[0].id,
+            uid: imageRecord[0].uid,
+            originalFilename: imageRecord[0].originalFilename,
+            filename: imageRecord[0].filename,
+            fileUrl: imageRecord[0].fileUrl,
+            mimeType: imageRecord[0].mimeType,
+            fileSize: imageRecord[0].fileSize,
+            width: imageRecord[0].width,
+            height: imageRecord[0].height,
+            displayOrder: imageRecord[0].displayOrder,
+            createdAt: imageRecord[0].createdAt,
+          });
+          
+        } catch (error) {
+          console.error('Error processing image:', error);
+          // Clean up any processed files if one fails
+          await deleteProblemImages(processedImagePaths);
+          // Also clean up any saved database records
+          if (savedImages.length > 0) {
+            await db
+              .delete(problemImages)
+              .where(and(
+                eq(problemImages.problemId, problem[0].id),
+                eq(problemImages.userId, userId)
+              ));
+          }
+          return c.json({
+            success: false,
+            error: `Failed to process image: ${file.originalname}`
+          }, 500);
+        }
+      }
+
+      return c.json({
+        success: true,
+        data: {
+          images: savedImages,
+          count: savedImages.length
+        }
+      }, 201);
+    } catch (error) {
+      console.error('Error uploading problem images:', error);
+      return c.json({
+        success: false,
+        error: 'Failed to upload images'
       }, 500);
     }
   },

@@ -72,9 +72,8 @@ export const mathProblems = pgTable('math_problems', {
   uid: varchar('uid', { length: 128 }).notNull(), // UUID for frontend
   notebookId: integer('notebook_id').notNull(),
   userId: varchar('user_id', { length: 128 }).notNull(), // Firebase UID reference
-  title: varchar('title', { length: 255 }).notNull(),
+  title: varchar('title', { length: 255 }),
   description: text('description'),
-  imagePaths: text('image_paths'), // JSON array of image paths
   scribbleData: text('scribble_data'), // Scribble drawing data
   status: varchar('status', { length: 20 }).default('unsolved'), // 'unsolved', 'in_progress', 'solved', 'needs_help'
   tags: text('tags'), // JSON array of tags
@@ -82,14 +81,22 @@ export const mathProblems = pgTable('math_problems', {
   updatedAt: timestamp('updated_at').defaultNow(),
 });
 
-// AI feedback table
-export const aiFeedbacks = pgTable('ai_feedbacks', {
+// Problem images table
+export const problemImages = pgTable('problem_images', {
   id: serial('id').primaryKey(),
   uid: varchar('uid', { length: 128 }).notNull(), // UUID for frontend
   problemId: integer('problem_id').notNull(),
   userId: varchar('user_id', { length: 128 }).notNull(), // Firebase UID reference
-  feedbackType: varchar('feedback_type', { length: 50 }).notNull(), // 'hint', 'solution', 'correction'
-  content: text('content').notNull(),
-  tokensUsed: integer('tokens_used').default(0),
+  originalFilename: varchar('original_filename', { length: 255 }).notNull(),
+  filename: varchar('filename', { length: 255 }).notNull(), // Processed filename
+  filePath: varchar('file_path', { length: 500 }).notNull(), // Server file path
+  fileUrl: varchar('file_url', { length: 500 }).notNull(), // Public URL
+  mimeType: varchar('mime_type', { length: 50 }).notNull(),
+  fileSize: integer('file_size').notNull(), // Size in bytes
+  width: integer('width'), // Image width in pixels
+  height: integer('height'), // Image height in pixels
+  displayOrder: integer('display_order').default(0), // Order for display
   createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
 });
+

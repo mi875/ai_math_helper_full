@@ -11,7 +11,9 @@ import { tokenController } from './controllers/tokenController.js';
 import { notebookController } from './controllers/notebookController.js';
 import { 
   profileImageUploadMiddleware, 
-  serveProfileImage 
+  serveProfileImage,
+  problemImageUploadMiddleware,
+  serveProblemImage
 } from './middleware/fileUploadMiddleware.js';
 
 // Create an api router with auth middleware
@@ -33,6 +35,7 @@ apiRouter.delete('/user/profile/image', deleteProfileImage);
 
 // File serving endpoints (public)
 apiRouter.get('/files/profile-images/:filename', serveProfileImage());
+apiRouter.get('/files/problem-images/:filename', serveProblemImage());
 
 // Token management endpoints
 apiRouter.get('/tokens/status', tokenController.getTokenStatus);
@@ -52,6 +55,12 @@ apiRouter.post('/notebooks/:uid/problems', notebookController.createProblem);
 apiRouter.put('/problems/:problemUid', notebookController.updateProblem);
 apiRouter.delete('/problems/:problemUid', notebookController.deleteProblem);
 apiRouter.get('/problems/:problemUid/feedbacks', notebookController.getProblemFeedbacks);
+
+// Problem image upload endpoint
+apiRouter.post('/problems/images/upload', 
+  problemImageUploadMiddleware(), 
+  notebookController.uploadProblemImages
+);
 
 // Health check endpoint - public, no auth needed
 // and hello world
