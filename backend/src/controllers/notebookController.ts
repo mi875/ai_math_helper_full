@@ -1,10 +1,12 @@
 import type { Context } from 'hono';
 import { db } from '../db/client.js';
-import { notebooks, mathProblems, users, problemImages } from '../db/schema.js';
-import { eq, and, desc } from 'drizzle-orm';
+import { notebooks, mathProblems, users, problemImages, aiFeedbacks } from '../db/schema.js';
+import { eq, and, desc, sql } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { processProblemImage, deleteProblemImages, generateImageUrl } from '../middleware/fileUploadMiddleware.js';
 import path from 'path';
+import { mastra } from '../mastra/index.js';
+import fs from "fs";
 
 // Helper function to ensure user exists in database
 async function ensureUserExists(user: { uid: string; email?: string }) {
@@ -513,9 +515,22 @@ export const notebookController = {
         }, 404);
       }
 
+      // Get AI feedbacks for this problem
+      const feedbacks = await db
+        .select()
+        .from(aiFeedbacks)
+        .where(eq(aiFeedbacks.problemId, problem[0].id))
+        .orderBy(desc(aiFeedbacks.createdAt));
+
       return c.json({
         success: true,
-        data: []
+        data: feedbacks.map(feedback => ({
+          id: feedback.uid,
+          message: feedback.feedbackText,
+          type: feedback.feedbackType,
+          timestamp: feedback.createdAt,
+          tokensConsumed: feedback.tokensConsumed
+        }))
       });
     } catch (error) {
       console.error('Error fetching problem feedbacks:', error);
@@ -659,6 +674,143 @@ export const notebookController = {
       return c.json({
         success: false,
         error: 'Failed to upload images'
+      }, 500);
+    }
+  },
+
+  // Generate AI feedback for a problem using canvas image
+  async generateAiFeedback(c: Context) {
+    try {
+      const user = c.get('user');
+      const userId = user.uid;
+      const problemUid = c.req.param('problemUid');
+
+      // Get uploaded canvas image from middleware
+      const files = c.get('uploadedFiles') as any[];
+      
+      if (!files || files.length === 0) {
+        return c.json({
+          success: false,
+          error: 'Canvas image is required'
+        }, 400);
+      }
+      
+      const canvasImageFile = files[0]; // Get the first (and only) uploaded file
+
+      // Find the problem
+      const problem = await db
+        .select()
+        .from(mathProblems)
+        .where(and(
+          eq(mathProblems.uid, problemUid),
+          eq(mathProblems.userId, userId)
+        ))
+        .limit(1);
+
+      if (problem.length === 0) {
+        return c.json({
+          success: false,
+          error: 'Problem not found'
+        }, 404);
+      }
+
+      // Get the original problem image
+      const problemImage = await db
+        .select()
+        .from(problemImages)
+        .where(eq(problemImages.problemId, problem[0].id))
+        .limit(1);
+
+      if (problemImage.length === 0) {
+        return c.json({
+          success: false,
+          error: 'Problem image not found'
+        }, 404);
+      }
+
+      // Get canvas image buffer from uploaded file
+      const canvasImageBuffer = canvasImageFile.buffer;
+
+      // Read original problem image from disk
+
+      console.log('Reading original problem image from:', problemImage[0].filePath);
+      const originalImageBuffer = fs.readFileSync(problemImage[0].filePath);
+
+      // Call mathHelper agent with both images
+      const mathHelperAgent = mastra.getAgent('mathHelperAgent');
+      const result = await mathHelperAgent.generate([
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: "Please analyze the original math problem and the user's handwritten solution. Provide educational feedback in Japanese with TeX notation for mathematical expressions."
+            },
+            {
+             type: 'image',
+             mimeType: problemImage[0].mimeType,
+             image:new URL(`data:${problemImage[0].mimeType};base64,${originalImageBuffer.toString('base64')}`)
+            },
+            // {
+            //   type: 'image', 
+            //   image: canvasImageBuffer.toString('base64'),
+            // }
+          ]
+        },
+     
+      ]);
+
+      // Parse feedback and determine type
+      const feedbackText = result.text;
+      let feedbackType = 'suggestion'; // default
+
+      // Simple heuristic to determine feedback type
+      if (feedbackText.includes('間違い') || feedbackText.includes('エラー') || feedbackText.includes('訂正')) {
+        feedbackType = 'correction';
+      } else if (feedbackText.includes('説明') || feedbackText.includes('なぜなら') || feedbackText.includes('理由')) {
+        feedbackType = 'explanation';
+      } else if (feedbackText.includes('頑張って') || feedbackText.includes('良い') || feedbackText.includes('素晴らしい')) {
+        feedbackType = 'encouragement';
+      }
+
+      // Save feedback to database
+      const feedbackRecord = await db
+        .insert(aiFeedbacks)
+        .values({
+          uid: randomUUID(),
+          problemId: problem[0].id,
+          userId,
+          feedbackText,
+          feedbackType,
+          tokensConsumed: 75, // Default token cost
+        })
+        .returning();
+
+      // Update user token usage
+      await db
+        .update(users)
+        .set({
+          usedTokens: sql`${users.usedTokens} + 75`,
+          remainingTokens: sql`${users.remainingTokens} - 75`,
+        })
+        .where(eq(users.uid, userId));
+
+      return c.json({
+        success: true,
+        data: {
+          id: feedbackRecord[0].uid,
+          message: feedbackRecord[0].feedbackText,
+          type: feedbackRecord[0].feedbackType,
+          timestamp: feedbackRecord[0].createdAt,
+          tokensConsumed: feedbackRecord[0].tokensConsumed
+        }
+      }, 201);
+
+    } catch (error) {
+      console.error('Error generating AI feedback:', error);
+      return c.json({
+        success: false,
+        error: 'Failed to generate AI feedback'
       }, 500);
     }
   },

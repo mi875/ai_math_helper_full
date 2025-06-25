@@ -3,6 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:scribble/scribble.dart';
 import 'package:ai_math_helper/data/notebook/data/math_problem.dart';
 import 'package:ai_math_helper/services/authenticated_image_provider.dart';
+import 'package:ai_math_helper/services/api_service.dart';
+import 'package:ai_math_helper/data/notebook/data/ai_feedback.dart';
+import 'package:ai_math_helper/data/notebook/data/problem_status.dart';
+import 'package:flutter/rendering.dart';
+import 'dart:ui' as ui;
+import 'dart:typed_data';
 
 class MathInputScreen extends ConsumerStatefulWidget {
   final MathProblem? problem;
@@ -19,6 +25,11 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
   final double _collapsedSheetWidthFraction = 0.3;
   final double _expandedSheetWidthFraction = 0.5;
   late TransformationController _transformationController;
+  
+  // AI feedback state
+  List<AiFeedback> _aiFeedbacks = [];
+  bool _isGeneratingFeedback = false;
+  final GlobalKey _scribbleKey = GlobalKey();
 
   @override
   void initState() {
@@ -57,6 +68,75 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
         duration: Duration(seconds: 2),
       ),
     );
+  }
+
+  // Generate AI feedback from canvas drawing
+  Future<void> _generateAiFeedback() async {
+    if (widget.problem?.id == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No problem selected')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isGeneratingFeedback = true;
+    });
+
+    try {
+      // Convert scribble canvas to image
+      final canvasImageBytes = await _captureCanvasAsImage();
+      
+      if (canvasImageBytes == null) {
+        throw Exception('Failed to capture canvas image');
+      }
+
+      // Call API to generate feedback
+      final feedback = await ApiService.generateAiFeedback(
+        widget.problem!.id,
+        canvasImageBytes,
+      );
+
+      if (feedback != null) {
+        setState(() {
+          _aiFeedbacks.insert(0, feedback);
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('AI feedback generated!')),
+        );
+      } else {
+        throw Exception('Failed to generate feedback');
+      }
+    } catch (error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $error')),
+      );
+    } finally {
+      setState(() {
+        _isGeneratingFeedback = false;
+      });
+    }
+  }
+
+  // Capture the scribble canvas as an image
+  Future<Uint8List?> _captureCanvasAsImage() async {
+    try {
+      // Get the render object of the scribble widget
+      final RenderRepaintBoundary boundary = _scribbleKey.currentContext
+          ?.findRenderObject() as RenderRepaintBoundary;
+      
+      // Convert to image
+      final ui.Image image = await boundary.toImage(pixelRatio: 2.0);
+      final ByteData? byteData = await image.toByteData(
+        format: ui.ImageByteFormat.png,
+      );
+      
+      return byteData?.buffer.asUint8List();
+    } catch (error) {
+      print('Error capturing canvas: $error');
+      return null;
+    }
   }
 
   @override
@@ -107,6 +187,24 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
             ),
           ),
           const SizedBox(width: 8),
+          ElevatedButton.icon(
+            onPressed: _isGeneratingFeedback || widget.problem?.id == null 
+                ? null 
+                : _generateAiFeedback,
+            icon: _isGeneratingFeedback 
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.psychology),
+            label: const Text('AI Help'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.secondary,
+              foregroundColor: Theme.of(context).colorScheme.onSecondary,
+            ),
+          ),
+          const SizedBox(width: 8),
         ],
       ),
       body: Stack(
@@ -138,7 +236,10 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
                         ),
                       ),
                     ),
-                  Scribble(notifier: notifier, drawPen: true),
+                  RepaintBoundary(
+                    key: _scribbleKey,
+                    child: Scribble(notifier: notifier, drawPen: true),
+                  ),
                 ],
               ),
             ),
@@ -262,12 +363,32 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
                               vertical: 8.0,
                             ), // Adjusted for chat bubbles
                             children: [
-                              // Sample AI Response
-                              _buildChatMessage(
-                                context,
-                                "Sure, I can help with that! The Pythagorean theorem states that in a right-angled triangle, the square of the hypotenuse (the side opposite the right angle) is equal to the sum of the squares of the other two sides. This is written as: a² + b² = c².",
-                              ),
-                              // Add more messages here as the chat progresses
+                              // Display AI Feedbacks
+                              if (_aiFeedbacks.isEmpty)
+                                Center(
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(16.0),
+                                    child: Column(
+                                      children: [
+                                        Icon(
+                                          Icons.psychology_outlined,
+                                          size: 48,
+                                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          'Tap "AI Help" to get feedback on your solution',
+                                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                )
+                              else
+                                ..._aiFeedbacks.map((feedback) => _buildFeedbackCard(feedback)),
                             ],
                           ),
                         ),
@@ -317,6 +438,111 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
       ),
       // bottomSheet: _buildAiFeedbackBottomSheet(), // Removed, using DraggableScrollableSheet
     );
+  }
+
+  // Build feedback card with TeX rendering
+  Widget _buildFeedbackCard(AiFeedback feedback) {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  _getFeedbackIcon(feedback.type),
+                  size: 16,
+                  color: _getFeedbackColor(feedback.type),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  _getFeedbackTypeLabel(feedback.type),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: _getFeedbackColor(feedback.type),
+                    fontSize: 12,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  _formatTimestamp(feedback.timestamp),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            // Use Text for now - TeX rendering can be enhanced later
+            Text(
+              feedback.message,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  IconData _getFeedbackIcon(FeedbackType type) {
+    switch (type) {
+      case FeedbackType.correction:
+        return Icons.edit;
+      case FeedbackType.explanation:
+        return Icons.lightbulb;
+      case FeedbackType.encouragement:
+        return Icons.thumb_up;
+      case FeedbackType.suggestion:
+      default:
+        return Icons.tips_and_updates;
+    }
+  }
+
+  Color _getFeedbackColor(FeedbackType type) {
+    switch (type) {
+      case FeedbackType.correction:
+        return Colors.orange;
+      case FeedbackType.explanation:
+        return Colors.blue;
+      case FeedbackType.encouragement:
+        return Colors.green;
+      case FeedbackType.suggestion:
+      default:
+        return Colors.purple;
+    }
+  }
+
+  String _getFeedbackTypeLabel(FeedbackType type) {
+    switch (type) {
+      case FeedbackType.correction:
+        return '訂正';
+      case FeedbackType.explanation:
+        return '説明';
+      case FeedbackType.encouragement:
+        return '励まし';
+      case FeedbackType.suggestion:
+      default:
+        return '提案';
+    }
+  }
+
+  String _formatTimestamp(DateTime timestamp) {
+    final now = DateTime.now();
+    final difference = now.difference(timestamp);
+    
+    if (difference.inMinutes < 1) {
+      return 'たった今';
+    } else if (difference.inHours < 1) {
+      return '${difference.inMinutes}分前';
+    } else if (difference.inDays < 1) {
+      return '${difference.inHours}時間前';
+    } else {
+      return '${difference.inDays}日前';
+    }
   }
 
   // _buildAiFeedbackBottomSheet() is no longer used for the primary layout.

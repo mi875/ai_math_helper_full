@@ -56,6 +56,7 @@ dependencies:
   http: ^1.2.2
   http_parser: ^4.1.0
   mime: ^1.0.6
+  gpt_markdown: ^0.1.4
 
 dev_dependencies:
   flutter_test:

@@ -1,11 +1,14 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mime/mime.dart';
+import 'package:ai_math_helper/data/notebook/data/ai_feedback.dart';
+import 'package:ai_math_helper/data/notebook/data/problem_status.dart';
 
 class ApiService {
   static const String baseUrl =
@@ -611,6 +614,102 @@ class ApiService {
     } catch (e) {
       debugPrint('Error deleting problem: $e');
       return false;
+    }
+  }
+
+  // AI Feedback Methods
+  static Future<AiFeedback?> generateAiFeedback(
+    String problemUid,
+    Uint8List canvasImageBytes,
+  ) async {
+    try {
+      final token = await _getAuthToken();
+      if (token == null) return null;
+
+      // Create multipart request
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/api/problems/$problemUid/feedback/generate'),
+      );
+
+      // Add authorization header
+      request.headers['Authorization'] = 'Bearer $token';
+
+      // Add canvas image file
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'images',
+          canvasImageBytes,
+          filename: 'canvas.png',
+          contentType: MediaType('image', 'png'),
+        ),
+      );
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 201) {
+        final data = json.decode(utf8.decode(response.bodyBytes));
+        final feedbackData = data['data'];
+        
+        return AiFeedback(
+          id: feedbackData['id'],
+          message: feedbackData['message'],
+          timestamp: DateTime.parse(feedbackData['timestamp']),
+          type: _parseFeedbackType(feedbackData['type']),
+        );
+      } else {
+        debugPrint('Failed to generate AI feedback: ${response.statusCode}');
+        debugPrint('Response: ${response.body}');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('Error generating AI feedback: $e');
+      return null;
+    }
+  }
+
+  static Future<List<AiFeedback>?> getProblemFeedbacks(String problemUid) async {
+    try {
+      final token = await _getAuthToken();
+      if (token == null) return null;
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/problems/$problemUid/feedbacks'),
+        headers: _getHeaders(token: token),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(utf8.decode(response.bodyBytes));
+        final feedbacksList = data['data'] as List;
+        
+        return feedbacksList.map((feedbackData) => AiFeedback(
+          id: feedbackData['id'],
+          message: feedbackData['message'],
+          timestamp: DateTime.parse(feedbackData['timestamp']),
+          type: _parseFeedbackType(feedbackData['type']),
+        )).toList();
+      } else {
+        debugPrint('Failed to get problem feedbacks: ${response.statusCode}');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('Error getting problem feedbacks: $e');
+      return null;
+    }
+  }
+
+  static FeedbackType _parseFeedbackType(String typeString) {
+    switch (typeString) {
+      case 'correction':
+        return FeedbackType.correction;
+      case 'explanation':
+        return FeedbackType.explanation;
+      case 'encouragement':
+        return FeedbackType.encouragement;
+      case 'suggestion':
+      default:
+        return FeedbackType.suggestion;
     }
   }
 }

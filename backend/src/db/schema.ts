@@ -100,3 +100,15 @@ export const problemImages = pgTable('problem_images', {
   updatedAt: timestamp('updated_at').defaultNow(),
 });
 
+// AI feedback table
+export const aiFeedbacks = pgTable('ai_feedbacks', {
+  id: serial('id').primaryKey(),
+  uid: varchar('uid', { length: 128 }).notNull(), // UUID for frontend
+  problemId: integer('problem_id').notNull(),
+  userId: varchar('user_id', { length: 128 }).notNull(), // Firebase UID reference
+  feedbackText: text('feedback_text').notNull(), // TeX-formatted feedback
+  feedbackType: varchar('feedback_type', { length: 20 }).notNull(), // 'suggestion', 'correction', 'explanation', 'encouragement'
+  tokensConsumed: integer('tokens_consumed').notNull(), // Tokens used for this feedback
+  createdAt: timestamp('created_at').defaultNow(),
+});
+

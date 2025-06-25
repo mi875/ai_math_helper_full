@@ -55,6 +55,10 @@ apiRouter.post('/notebooks/:uid/problems', notebookController.createProblem);
 apiRouter.put('/problems/:problemUid', notebookController.updateProblem);
 apiRouter.delete('/problems/:problemUid', notebookController.deleteProblem);
 apiRouter.get('/problems/:problemUid/feedbacks', notebookController.getProblemFeedbacks);
+apiRouter.post('/problems/:problemUid/feedback/generate', 
+  problemImageUploadMiddleware(), 
+  notebookController.generateAiFeedback
+);
 
 // Problem image upload endpoint
 apiRouter.post('/problems/images/upload', 
