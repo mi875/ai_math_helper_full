@@ -45,6 +45,20 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
     }
   }
 
+  void _checkAnswer() {
+    // TODO: Implement answer checking logic
+    // This could integrate with the AI system to evaluate the drawn solution
+    print('Check Answer button pressed');
+    
+    // Show a snackbar as feedback for now
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Answer checking functionality coming soon!'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     notifier.dispose();
@@ -83,6 +97,16 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
             icon: const Icon(Icons.clear),
             onPressed: () => notifier.clear(),
           ),
+          ElevatedButton.icon(
+            onPressed: _checkAnswer,
+            icon: const Icon(Icons.check_circle_outline),
+            label: const Text('Check'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
+            ),
+          ),
+          const SizedBox(width: 8),
         ],
       ),
       body: Stack(
