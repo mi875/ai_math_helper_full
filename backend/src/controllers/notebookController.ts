@@ -27,7 +27,7 @@ async function ensureUserExists(user: { uid: string; email?: string }) {
 }
 
 export const notebookController = {
-  // Get all notebooks for a user
+  // Get all notebooks for a user with problem counts
   async getNotebooks(c: Context) {
     try {
       const user = c.get('user');
@@ -39,9 +39,24 @@ export const notebookController = {
         .where(eq(notebooks.userId, userId))
         .orderBy(desc(notebooks.updatedAt));
 
+      // Get problem counts for each notebook
+      const notebooksWithCounts = await Promise.all(
+        userNotebooks.map(async (notebook) => {
+          const problems = await db
+            .select()
+            .from(mathProblems)
+            .where(eq(mathProblems.notebookId, notebook.id));
+          
+          return {
+            ...notebook,
+            problems: problems // Include actual problems array for frontend compatibility
+          };
+        })
+      );
+
       return c.json({
         success: true,
-        data: userNotebooks
+        data: notebooksWithCounts
       });
     } catch (error) {
       console.error('Error fetching notebooks:', error);
