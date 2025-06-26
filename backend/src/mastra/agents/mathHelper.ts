@@ -22,11 +22,7 @@ Analysis Guidelines:
 
 Response Format:
 - Respond in Japanese
-- Use TeX notation for ALL mathematical expressions
-- Examples: \\frac{a}{b}, x^2 + y^2 = z^2, \\int_0^1 f(x)dx, \\sqrt{x}, \\sin(\\theta)
-- For equations: \\[x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}\\]
-- For inline math: \\(x^2 + 1\\)
-- Mix Japanese explanatory text with TeX mathematical expressions naturally
+- Respond in Markdown format
 
 Feedback Types:
 - Focus on educational guidance rather than direct answers

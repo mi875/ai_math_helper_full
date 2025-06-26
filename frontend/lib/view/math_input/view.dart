@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gpt_markdown/custom_widgets/selectable_adapter.dart';
+import 'package:gpt_markdown/gpt_markdown.dart';
 import 'package:scribble/scribble.dart';
 import 'package:ai_math_helper/data/notebook/data/math_problem.dart';
 import 'package:ai_math_helper/services/authenticated_image_provider.dart';
@@ -25,7 +28,7 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
   final double _collapsedSheetWidthFraction = 0.3;
   final double _expandedSheetWidthFraction = 0.5;
   late TransformationController _transformationController;
-  
+
   // AI feedback state
   List<AiFeedback> _aiFeedbacks = [];
   bool _isGeneratingFeedback = false;
@@ -60,7 +63,7 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
     // TODO: Implement answer checking logic
     // This could integrate with the AI system to evaluate the drawn solution
     print('Check Answer button pressed');
-    
+
     // Show a snackbar as feedback for now
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -73,9 +76,9 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
   // Generate AI feedback from canvas drawing
   Future<void> _generateAiFeedback() async {
     if (widget.problem?.id == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No problem selected')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('No problem selected')));
       return;
     }
 
@@ -86,7 +89,7 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
     try {
       // Convert scribble canvas to image
       final canvasImageBytes = await _captureCanvasAsImage();
-      
+
       if (canvasImageBytes == null) {
         throw Exception('Failed to capture canvas image');
       }
@@ -101,17 +104,17 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
         setState(() {
           _aiFeedbacks.insert(0, feedback);
         });
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('AI feedback generated!')),
-        );
+
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('AI feedback generated!')));
       } else {
         throw Exception('Failed to generate feedback');
       }
     } catch (error) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $error')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $error')));
     } finally {
       setState(() {
         _isGeneratingFeedback = false;
@@ -123,15 +126,16 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
   Future<Uint8List?> _captureCanvasAsImage() async {
     try {
       // Get the render object of the scribble widget
-      final RenderRepaintBoundary boundary = _scribbleKey.currentContext
-          ?.findRenderObject() as RenderRepaintBoundary;
-      
+      final RenderRepaintBoundary boundary =
+          _scribbleKey.currentContext?.findRenderObject()
+              as RenderRepaintBoundary;
+
       // Convert to image
       final ui.Image image = await boundary.toImage(pixelRatio: 2.0);
       final ByteData? byteData = await image.toByteData(
         format: ui.ImageByteFormat.png,
       );
-      
+
       return byteData?.buffer.asUint8List();
     } catch (error) {
       print('Error capturing canvas: $error');
@@ -188,16 +192,18 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
           ),
           const SizedBox(width: 8),
           ElevatedButton.icon(
-            onPressed: _isGeneratingFeedback || widget.problem?.id == null 
-                ? null 
-                : _generateAiFeedback,
-            icon: _isGeneratingFeedback 
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.psychology),
+            onPressed:
+                _isGeneratingFeedback || widget.problem?.id == null
+                    ? null
+                    : _generateAiFeedback,
+            icon:
+                _isGeneratingFeedback
+                    ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                    : const Icon(Icons.psychology),
             label: const Text('AI Help'),
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.secondary,
@@ -373,13 +379,21 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
                                         Icon(
                                           Icons.psychology_outlined,
                                           size: 48,
-                                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                          color:
+                                              Theme.of(
+                                                context,
+                                              ).colorScheme.onSurfaceVariant,
                                         ),
                                         const SizedBox(height: 8),
                                         Text(
                                           'Tap "AI Help" to get feedback on your solution',
-                                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                          style: Theme.of(
+                                            context,
+                                          ).textTheme.bodyMedium?.copyWith(
+                                            color:
+                                                Theme.of(
+                                                  context,
+                                                ).colorScheme.onSurfaceVariant,
                                           ),
                                           textAlign: TextAlign.center,
                                         ),
@@ -388,7 +402,9 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
                                   ),
                                 )
                               else
-                                ..._aiFeedbacks.map((feedback) => _buildFeedbackCard(feedback)),
+                                ..._aiFeedbacks.map(
+                                  (feedback) => _buildFeedbackCard(feedback),
+                                ),
                             ],
                           ),
                         ),
@@ -475,12 +491,155 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
               ],
             ),
             const SizedBox(height: 8),
-            // Use Text for now - TeX rendering can be enhanced later
-            Text(
-              feedback.message,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+            // Render AI feedback with TeX support using gpt_markdown
+            Builder(
+              builder: (context) {
+                return GptMarkdown(
+                  feedback.message,
+                  onLinkTap: (url, title) {
+                    debugPrint(url);
+                    debugPrint(title);
+                  },
+                  useDollarSignsForLatex: true,
+                  textAlign: TextAlign.justify,
+                  textScaler: const TextScaler.linear(1),
+                  style: const TextStyle(fontSize: 15),
+                  highlightBuilder: (context, text, style) {
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.secondaryContainer,
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.secondary.withValues(alpha: 0.5),
+                          width: 1,
+                        ),
+                      ),
+                      child: Text(
+                        text,
+                        style: TextStyle(
+                          color:
+                              Theme.of(
+                                context,
+                              ).colorScheme.onSecondaryContainer,
+                          fontFamily: 'monospace',
+                          fontWeight: FontWeight.bold,
+                          fontSize:
+                              style.fontSize != null
+                                  ? style.fontSize! * 0.9
+                                  : 13.5,
+                          height: style.height,
+                        ),
+                      ),
+                    );
+                  },
+                  latexWorkaround: (tex) {
+                    List<String> stack = [];
+                    tex = tex.splitMapJoin(
+                      RegExp(r"\\text\{|\{|\}|\_"),
+                      onMatch: (p) {
+                        String input = p[0] ?? "";
+                        if (input == r"\text{") {
+                          stack.add(input);
+                        }
+                        if (stack.isNotEmpty) {
+                          if (input == r"{") {
+                            stack.add(input);
+                          }
+                          if (input == r"}") {
+                            stack.removeLast();
+                          }
+                          if (input == r"_") {
+                            return r"\_";
+                          }
+                        }
+                        return input;
+                      },
+                    );
+                    return tex.replaceAllMapped(
+                      RegExp(r"align\*"),
+                      (match) => "aligned",
+                    );
+                  },
+                  imageBuilder: (context, url) {
+                    return Image.network(url, width: 100, height: 100);
+                  },
+                  latexBuilder: (context, tex, textStyle, inline) {
+                    if (tex.contains(r"\begin{tabular}")) {
+                      // return table.
+                      String tableString =
+                          "|${(RegExp(r"^\\begin\{tabular\}\{.*?\}(.*?)\\end\{tabular\}$", multiLine: true, dotAll: true).firstMatch(tex)?[1] ?? "").trim()}|";
+                      tableString = tableString
+                          .replaceAll(r"\\", "|\n|")
+                          .replaceAll(r"\hline", "")
+                          .replaceAll(RegExp(r"(?<!\\)&"), "|");
+                      var tableStringList = tableString.split("\n")
+                        ..insert(1, "|---|");
+                      tableString = tableStringList.join("\n");
+                      return GptMarkdown(tableString);
+                    }
+                    var controller = ScrollController();
+                    Widget child = Math.tex(tex, textStyle: textStyle);
+                    if (!inline) {
+                      child = Padding(
+                        padding: const EdgeInsets.all(0.0),
+                        child: Material(
+                          color: Theme.of(context).colorScheme.onInverseSurface,
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Scrollbar(
+                              controller: controller,
+                              child: SingleChildScrollView(
+                                controller: controller,
+                                scrollDirection: Axis.horizontal,
+                                child: Math.tex(tex, textStyle: textStyle),
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+                    child = SelectableAdapter(
+                      selectedText: tex,
+                      child: Math.tex(tex),
+                    );
+                    child = InkWell(
+                      onTap: () {
+                        debugPrint("Hello world");
+                      },
+                      child: child,
+                    );
+                    return child;
+                  },
+                  sourceTagBuilder: (buildContext, string, textStyle) {
+                    var value = int.tryParse(string);
+                    value ??= -1;
+                    value += 1;
+                    return SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Center(child: Text("$value")),
+                      ),
+                    );
+                  },
+                  linkBuilder: (context, label, path, style) {
+                    return Text(
+                      label,
+                      style: style.copyWith(color: Colors.blue),
+                    );
+                  },
+                );
+              },
             ),
           ],
         ),
@@ -533,7 +692,7 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
   String _formatTimestamp(DateTime timestamp) {
     final now = DateTime.now();
     final difference = now.difference(timestamp);
-    
+
     if (difference.inMinutes < 1) {
       return 'たった今';
     } else if (difference.inHours < 1) {
