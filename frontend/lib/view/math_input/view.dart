@@ -74,6 +74,8 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
   }
 
   // Generate AI feedback from canvas drawing
+  String _currentStreamingText = '';
+
   Future<void> _generateAiFeedback() async {
     if (widget.problem?.id == null) {
       ScaffoldMessenger.of(
@@ -84,6 +86,7 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
 
     setState(() {
       _isGeneratingFeedback = true;
+      _currentStreamingText = '';
     });
 
     try {
@@ -94,31 +97,140 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
         throw Exception('Failed to capture canvas image');
       }
 
-      // Call API to generate feedback
-      final feedback = await ApiService.generateAiFeedback(
-        widget.problem!.id,
-        canvasImageBytes,
+      // Create a temporary feedback object for streaming display
+      final tempFeedback = AiFeedback(
+        id: 'streaming-temp',
+        message: '',
+        timestamp: DateTime.now(),
+        type: FeedbackType.suggestion,
       );
 
-      if (feedback != null) {
-        setState(() {
-          _aiFeedbacks.insert(0, feedback);
-        });
+      setState(() {
+        _aiFeedbacks.insert(0, tempFeedback);
+      });
 
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('AI feedback generated!')));
-      } else {
-        throw Exception('Failed to generate feedback');
+      // Start streaming AI feedback with fallback
+      try {
+        await for (final chunk in ApiService.streamAiFeedback(
+          widget.problem!.id,
+          canvasImageBytes,
+        )) {
+        if (!mounted) break;
+
+        switch (chunk['type']) {
+          case 'start':
+            setState(() {
+              _currentStreamingText = chunk['message'] ?? 'AI分析を開始しています...';
+              _aiFeedbacks[0] = _aiFeedbacks[0].copyWith(
+                message: _currentStreamingText,
+              );
+            });
+            break;
+
+          case 'chunk':
+            setState(() {
+              _currentStreamingText = chunk['fullText'] ?? '';
+              _aiFeedbacks[0] = _aiFeedbacks[0].copyWith(
+                message: _currentStreamingText,
+              );
+            });
+            break;
+
+          case 'complete':
+            final completedFeedback = AiFeedback(
+              id: chunk['id'],
+              message: chunk['message'],
+              timestamp: DateTime.parse(chunk['timestamp']),
+              type: _parseFeedbackType(chunk['feedbackType']),
+            );
+            
+            setState(() {
+              _aiFeedbacks[0] = completedFeedback;
+            });
+
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('AI feedback generated!')));
+            break;
+
+          case 'error':
+            setState(() {
+              _aiFeedbacks.removeAt(0); // Remove temporary feedback
+            });
+            throw Exception(chunk['error'] ?? 'Unknown streaming error');
+        }
+      }
+      } catch (streamingError) {
+        debugPrint('Streaming failed: $streamingError');
+        
+        // Fallback to original non-streaming API
+        try {
+          setState(() {
+            _currentStreamingText = 'ストリーミングに失敗しました。通常のAPIを使用しています...';
+            _aiFeedbacks[0] = _aiFeedbacks[0].copyWith(
+              message: _currentStreamingText,
+            );
+          });
+
+          final feedback = await ApiService.generateAiFeedback(
+            widget.problem!.id,
+            canvasImageBytes,
+          );
+
+          if (feedback != null) {
+            setState(() {
+              _aiFeedbacks[0] = feedback;
+            });
+            
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(
+              content: Text('AI feedback generated (fallback mode)'),
+              backgroundColor: Colors.orange,
+            ));
+          } else {
+            throw Exception('Fallback API also failed');
+          }
+        } catch (fallbackError) {
+          // Remove temporary feedback if both streaming and fallback failed
+          if (_aiFeedbacks.isNotEmpty && _aiFeedbacks[0].id == 'streaming-temp') {
+            setState(() {
+              _aiFeedbacks.removeAt(0);
+            });
+          }
+          throw Exception('Both streaming and fallback failed: $fallbackError');
+        }
       }
     } catch (error) {
+      // Remove temporary feedback if still present
+      if (_aiFeedbacks.isNotEmpty && _aiFeedbacks[0].id == 'streaming-temp') {
+        setState(() {
+          _aiFeedbacks.removeAt(0);
+        });
+      }
+      
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Error: $error')));
     } finally {
       setState(() {
         _isGeneratingFeedback = false;
+        _currentStreamingText = '';
       });
+    }
+  }
+
+  FeedbackType _parseFeedbackType(String typeString) {
+    switch (typeString) {
+      case 'correction':
+        return FeedbackType.correction;
+      case 'explanation':
+        return FeedbackType.explanation;
+      case 'encouragement':
+        return FeedbackType.encouragement;
+      case 'suggestion':
+      default:
+        return FeedbackType.suggestion;
     }
   }
 
@@ -494,8 +606,11 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
             // Render AI feedback with TeX support using gpt_markdown
             Builder(
               builder: (context) {
-                return GptMarkdown(
-                  feedback.message,
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    GptMarkdown(
+                      feedback.message,
                   onLinkTap: (url, title) {
                     debugPrint(url);
                     debugPrint(title);
@@ -638,6 +753,36 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
                       style: style.copyWith(color: Colors.blue),
                     );
                   },
+                ),
+                    // Show typing indicator if this is the streaming feedback
+                    if (feedback.id == 'streaming-temp' && _isGeneratingFeedback)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Theme.of(context).colorScheme.primary,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'AIが回答を生成中...',
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                fontSize: 12,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
                 );
               },
             ),

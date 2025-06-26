@@ -59,6 +59,10 @@ apiRouter.post('/problems/:problemUid/feedback/generate',
   problemImageUploadMiddleware(), 
   notebookController.generateAiFeedback
 );
+apiRouter.post('/problems/:problemUid/feedback/stream', 
+  problemImageUploadMiddleware(), 
+  notebookController.streamAiFeedback
+);
 
 // Problem image upload endpoint
 apiRouter.post('/problems/images/upload', 

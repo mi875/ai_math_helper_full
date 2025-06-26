@@ -669,6 +669,65 @@ class ApiService {
     }
   }
 
+  // Stream AI feedback generation in real-time
+  static Stream<Map<String, dynamic>> streamAiFeedback(
+    String problemUid,
+    Uint8List canvasImageBytes,
+  ) async* {
+    try {
+      final token = await _getAuthToken();
+      if (token == null) {
+        yield {'type': 'error', 'error': 'No authentication token available'};
+        return;
+      }
+
+      // Create multipart request
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/api/problems/$problemUid/feedback/stream'),
+      );
+
+      // Add authorization header
+      request.headers['Authorization'] = 'Bearer $token';
+
+      // Add canvas image file
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'images',
+          canvasImageBytes,
+          filename: 'canvas.png',
+          contentType: MediaType('image', 'png'),
+        ),
+      );
+
+      final streamedResponse = await request.send();
+
+      if (streamedResponse.statusCode != 200) {
+        yield {'type': 'error', 'error': 'Failed to start streaming: ${streamedResponse.statusCode}'};
+        return;
+      }
+
+      // Parse Server-Sent Events stream
+      await for (final chunk in streamedResponse.stream.transform(utf8.decoder).transform(LineSplitter())) {
+        if (chunk.startsWith('data: ')) {
+          final jsonData = chunk.substring(6); // Remove 'data: ' prefix
+          if (jsonData.trim().isNotEmpty) {
+            try {
+              final data = json.decode(jsonData);
+              yield data;
+            } catch (e) {
+              debugPrint('Error parsing SSE data: $e');
+              yield {'type': 'error', 'error': 'Failed to parse streaming data'};
+            }
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error in streaming AI feedback: $e');
+      yield {'type': 'error', 'error': 'Failed to stream AI feedback: $e'};
+    }
+  }
+
   static Future<List<AiFeedback>?> getProblemFeedbacks(String problemUid) async {
     try {
       final token = await _getAuthToken();

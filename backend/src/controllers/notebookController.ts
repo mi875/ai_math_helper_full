@@ -751,10 +751,11 @@ export const notebookController = {
              mimeType: problemImage[0].mimeType,
              image:new URL(`data:${problemImage[0].mimeType};base64,${originalImageBuffer.toString('base64')}`)
             },
-            // {
-            //   type: 'image', 
-            //   image: canvasImageBuffer.toString('base64'),
-            // }
+            {
+              type: 'image',
+              mimeType: 'image/png',
+              image: new URL(`data:image/png;base64,${canvasImageBuffer.toString('base64')}`)
+            }
           ]
         },
      
@@ -811,6 +812,255 @@ export const notebookController = {
       return c.json({
         success: false,
         error: 'Failed to generate AI feedback'
+      }, 500);
+    }
+  },
+
+  // Stream AI feedback generation in real-time
+  async streamAiFeedback(c: Context) {
+    console.log('=== STREAMING ENDPOINT HIT ===');
+    try {
+      const user = c.get('user');
+      const userId = user?.uid;
+      const problemUid = c.req.param('problemUid');
+
+      console.log('Streaming request - User:', user, 'UserId:', userId, 'ProblemUid:', problemUid);
+
+      if (!userId) {
+        console.log('Missing userId - user object:', user);
+        return c.json({
+          success: false,
+          error: 'Authentication failed - no user ID'
+        }, 400);
+      }
+      
+      if (!problemUid) {
+        console.log('Missing problemUid from params');
+        return c.json({
+          success: false,
+          error: 'Missing problem ID parameter'
+        }, 400);
+      }
+
+      // Set up Server-Sent Events headers
+      c.header('Content-Type', 'text/event-stream');
+      c.header('Cache-Control', 'no-cache');
+      c.header('Connection', 'keep-alive');
+      c.header('Access-Control-Allow-Origin', '*');
+      c.header('Access-Control-Allow-Headers', 'Content-Type');
+
+      // Get uploaded canvas image from middleware  
+      const files = c.get('uploadedFiles') as any[];
+      
+      console.log('Files from middleware:', files?.length || 0);
+      
+      if (!files || files.length === 0) {
+        const errorData = JSON.stringify({
+          success: false,
+          error: 'Canvas image is required'
+        });
+        return new Response(`data: ${errorData}\n\n`, {
+          headers: {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            'Access-Control-Allow-Origin': '*',
+          }
+        });
+      }
+
+      // Get problem and original image
+      const problem = await db
+        .select()
+        .from(mathProblems)
+        .where(eq(mathProblems.uid, problemUid))
+        .limit(1);
+
+      if (problem.length === 0) {
+        const errorData = JSON.stringify({
+          success: false,
+          error: 'Problem not found'
+        });
+        return new Response(`data: ${errorData}\n\n`, {
+          headers: {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            'Access-Control-Allow-Origin': '*',
+          }
+        });
+      }
+
+      const problemImage = await db
+        .select()
+        .from(problemImages)
+        .where(eq(problemImages.problemId, problem[0].id))
+        .limit(1);
+
+      if (problemImage.length === 0) {
+        const errorData = JSON.stringify({
+          success: false,
+          error: 'Problem image not found'
+        });
+        return new Response(`data: ${errorData}\n\n`, {
+          headers: {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            'Access-Control-Allow-Origin': '*',
+          }
+        });
+      }
+
+      const canvasImageFile = files[0]; // Get the first (and only) uploaded file
+
+      // Get canvas and original image buffers
+      const canvasImageBuffer = canvasImageFile.buffer;
+      const originalImageBuffer = fs.readFileSync(problemImage[0].filePath);
+
+      // Create a readable stream for SSE
+      const encoder = new TextEncoder();
+      let feedbackId: string;
+      let fullFeedbackText = '';
+      let tokenCount = 0;
+
+      const stream = new ReadableStream({
+        async start(controller) {
+          try {
+            // Send initial status
+            const startData = JSON.stringify({
+              type: 'start',
+              message: 'AI分析を開始しています...'
+            });
+            controller.enqueue(encoder.encode(`data: ${startData}\n\n`));
+
+            // Call mathHelper agent with streaming
+            const mathHelperAgent = mastra.getAgent('mathHelperAgent');
+            
+            // Generate unique feedback ID
+            feedbackId = randomUUID();
+            
+            const result = await mathHelperAgent.generate([
+              {
+                role: 'user',
+                content: [
+                  {
+                    type: 'text',
+                    text: "Please analyze the original math problem and the user's handwritten solution. Provide educational feedback in Japanese with TeX notation for mathematical expressions."
+                  },
+                  {
+                    type: 'image',
+                    mimeType: problemImage[0].mimeType,
+                    image: new URL(`data:${problemImage[0].mimeType};base64,${originalImageBuffer.toString('base64')}`)
+                  },
+                  {
+                    type: 'image',
+                    mimeType: 'image/png',
+                    image: new URL(`data:image/png;base64,${canvasImageBuffer.toString('base64')}`)
+                  }
+                ]
+              }
+            ]);
+
+            // Get the full response and simulate streaming by chunking
+            fullFeedbackText = result.text;
+            tokenCount = Math.ceil(fullFeedbackText.length / 4); // Rough token estimation
+            
+            // Simulate streaming by breaking response into chunks
+            const words = fullFeedbackText.split(' ');
+            let currentText = '';
+            
+            for (let i = 0; i < words.length; i++) {
+              currentText += (i > 0 ? ' ' : '') + words[i];
+              
+              // Send chunk every few words to simulate streaming
+              if (i % 3 === 0 || i === words.length - 1) {
+                const chunkData = JSON.stringify({
+                  type: 'chunk',
+                  chunk: words[i],
+                  fullText: currentText,
+                  id: feedbackId
+                });
+                controller.enqueue(encoder.encode(`data: ${chunkData}\n\n`));
+                
+                // Small delay to simulate real streaming
+                await new Promise(resolve => setTimeout(resolve, 100));
+              }
+            }
+
+            // Determine feedback type from full text
+            let feedbackType = 'suggestion';
+            if (fullFeedbackText.includes('間違い') || fullFeedbackText.includes('エラー') || fullFeedbackText.includes('訂正')) {
+              feedbackType = 'correction';
+            } else if (fullFeedbackText.includes('説明') || fullFeedbackText.includes('なぜなら') || fullFeedbackText.includes('理由')) {
+              feedbackType = 'explanation';
+            } else if (fullFeedbackText.includes('頑張って') || fullFeedbackText.includes('良い') || fullFeedbackText.includes('素晴らしい')) {
+              feedbackType = 'encouragement';
+            }
+
+            // Save feedback to database
+            const feedbackRecord = await db
+              .insert(aiFeedbacks)
+              .values({
+                uid: feedbackId,
+                problemId: problem[0].id,
+                userId,
+                feedbackText: fullFeedbackText,
+                feedbackType,
+                tokensConsumed: Math.max(tokenCount, 25), // Ensure minimum token count
+              })
+              .returning();
+
+            // Update user token usage
+            const tokensUsed = feedbackRecord[0].tokensConsumed;
+            await db
+              .update(users)
+              .set({
+                usedTokens: sql`${users.usedTokens} + ${tokensUsed}`,
+                remainingTokens: sql`${users.remainingTokens} - ${tokensUsed}`,
+              })
+              .where(eq(users.uid, userId));
+
+            // Send completion message
+            const completeData = JSON.stringify({
+              type: 'complete',
+              id: feedbackRecord[0].uid,
+              message: feedbackRecord[0].feedbackText,
+              feedbackType: feedbackRecord[0].feedbackType,
+              timestamp: feedbackRecord[0].createdAt,
+              tokensConsumed: feedbackRecord[0].tokensConsumed
+            });
+            controller.enqueue(encoder.encode(`data: ${completeData}\n\n`));
+
+          } catch (error) {
+            console.error('Error in streaming AI feedback:', error);
+            const errorData = JSON.stringify({
+              type: 'error',
+              error: 'Failed to generate AI feedback',
+              details: error instanceof Error ? error.message : 'Unknown error'
+            });
+            controller.enqueue(encoder.encode(`data: ${errorData}\n\n`));
+          } finally {
+            controller.close();
+          }
+        }
+      });
+
+      return new Response(stream, {
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        }
+      });
+
+    } catch (error) {
+      console.error('Error setting up streaming AI feedback:', error);
+      return c.json({
+        success: false,
+        error: 'Failed to set up streaming'
       }, 500);
     }
   },
