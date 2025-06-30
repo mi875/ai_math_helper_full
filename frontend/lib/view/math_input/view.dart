@@ -28,22 +28,25 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
   final double _collapsedSheetWidthFraction = 0.3;
   final double _expandedSheetWidthFraction = 0.5;
   late TransformationController _transformationController;
+  late DraggableScrollableController _draggableController;
 
   // AI feedback state
   List<AiFeedback> _aiFeedbacks = [];
   bool _isGeneratingFeedback = false;
   final GlobalKey _scribbleKey = GlobalKey();
-  
+
   // Chat message state
   final TextEditingController _messageController = TextEditingController();
   bool _isSendingMessage = false;
-  List<Map<String, dynamic>> _chatMessages = []; // Store both user and AI messages
+  List<Map<String, dynamic>> _chatMessages =
+      []; // Store both user and AI messages
 
   @override
   void initState() {
     super.initState();
     notifier = ScribbleNotifier(widths: [2]);
     _transformationController = TransformationController();
+    _draggableController = DraggableScrollableController();
   }
 
   @override
@@ -62,6 +65,14 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
     } catch (e) {
       // If setColor doesn't exist, the pen will use default color
     }
+  }
+
+  void _expandSheet() {
+    _draggableController.animateTo(
+      0.9, // Expand to maximum size
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
   }
 
   void _checkAnswer() {
@@ -153,7 +164,8 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
           switch (chunk['type']) {
             case 'start':
               setState(() {
-                _currentStreamingText = chunk['message'] ?? 'AI is responding...';
+                _currentStreamingText =
+                    chunk['message'] ?? 'AI is responding...';
                 _aiFeedbacks[0] = _aiFeedbacks[0].copyWith(
                   message: _currentStreamingText,
                 );
@@ -184,7 +196,7 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
                 timestamp: DateTime.parse(chunk['timestamp']),
                 type: _parseFeedbackType(chunk['feedbackType']),
               );
-              
+
               setState(() {
                 _aiFeedbacks[0] = completedFeedback;
                 _chatMessages[0] = {
@@ -208,7 +220,7 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
         }
       } catch (streamingError) {
         debugPrint('Streaming failed: $streamingError');
-        
+
         // Fallback to original non-streaming API
         try {
           setState(() {
@@ -244,12 +256,14 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
             throw Exception('Fallback API also failed');
           }
         } catch (fallbackError) {
-          if (_aiFeedbacks.isNotEmpty && _aiFeedbacks[0].id == 'streaming-temp') {
+          if (_aiFeedbacks.isNotEmpty &&
+              _aiFeedbacks[0].id == 'streaming-temp') {
             setState(() {
               _aiFeedbacks.removeAt(0);
             });
           }
-          if (_chatMessages.isNotEmpty && _chatMessages[0]['id'] == 'ai-streaming-temp') {
+          if (_chatMessages.isNotEmpty &&
+              _chatMessages[0]['id'] == 'ai-streaming-temp') {
             setState(() {
               _chatMessages.removeAt(0);
             });
@@ -263,15 +277,16 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
           _aiFeedbacks.removeAt(0);
         });
       }
-      if (_chatMessages.isNotEmpty && _chatMessages[0]['id'] == 'ai-streaming-temp') {
+      if (_chatMessages.isNotEmpty &&
+          _chatMessages[0]['id'] == 'ai-streaming-temp') {
         setState(() {
           _chatMessages.removeAt(0);
         });
       }
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error sending message: $error')),
-      );
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error sending message: $error')));
     } finally {
       setState(() {
         _isSendingMessage = false;
@@ -306,6 +321,7 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
     notifier.dispose();
     _transformationController.dispose();
     _messageController.dispose();
+    _draggableController.dispose();
     super.dispose();
   }
 
@@ -423,8 +439,9 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
                 right: 8.0,
               ), // Outer margin for the panel
               child: DraggableScrollableSheet(
+                controller: _draggableController,
                 initialChildSize: 0.5,
-                minChildSize: 0.3,
+                minChildSize: 0.4,
                 maxChildSize: 0.9,
                 builder: (
                   BuildContext context,
@@ -441,79 +458,99 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
                     ),
                     clipBehavior: Clip.antiAlias,
                     child: Column(
-                      // Ensure mainAxisSize is not min (default is max)
+                      mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Drag Handle
-                        Center(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 8.0),
-                            child: Container(
-                              width: 32,
-                              height: 4,
-                              decoration: BoxDecoration(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
-                                borderRadius: BorderRadius.circular(2.0),
-                              ),
-                            ),
-                          ),
-                        ),
-                        // Title and Width Toggle Button
-                        Padding(
-                          padding: const EdgeInsets.only(
-                            left: 16.0,
-                            top: 8.0,
-                            bottom: 4.0,
-                            right: 8.0, // Added right padding for the button
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        // Tappable top area (Drag Handle + Title)
+                        GestureDetector(
+                          onTap: _expandSheet,
+                          behavior: HitTestBehavior.opaque,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              Expanded(
-                                // Allow title to take available space
-                                child: Text(
-                                  'AI Feedback & Tips',
-                                  style: Theme.of(
-                                    context,
-                                  ).textTheme.titleMedium?.copyWith(
-                                    color:
-                                        Theme.of(
-                                          context,
-                                        ).colorScheme.onSurfaceVariant,
+                              // Drag Handle
+                              Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 8.0,
                                   ),
-                                  overflow:
-                                      TextOverflow
-                                          .ellipsis, // Handle potential overflow
+                                  child: Container(
+                                    width: 32,
+                                    height: 4,
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant
+                                          .withValues(alpha: 0.4),
+                                      borderRadius: BorderRadius.circular(2.0),
+                                    ),
+                                  ),
                                 ),
                               ),
-                              IconButton(
-                                icon: Icon(
-                                  _isSheetWidthExpanded
-                                      ? Icons.width_normal
-                                      : Icons.width_wide,
+                              // Title and Width Toggle Button
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  left: 16.0,
+                                  top: 0,
+                                  bottom: 4.0,
+                                  right:
+                                      4.0, // Added right padding for the button
                                 ),
-                                onPressed: () {
-                                  setState(() {
-                                    _isSheetWidthExpanded =
-                                        !_isSheetWidthExpanded;
-                                  });
-                                },
-                                tooltip:
-                                    _isSheetWidthExpanded
-                                        ? 'Collapse width'
-                                        : 'Expand width',
-                                color:
-                                    Theme.of(
-                                      context,
-                                    ).colorScheme.onSurfaceVariant,
-                                iconSize: 20.0, // Adjusted icon size
-                                padding:
-                                    EdgeInsets
-                                        .zero, // Reduce padding around icon
-                                constraints:
-                                    const BoxConstraints(), // Reduce tap target size if needed
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      // Allow title to take available space
+                                      child: Text(
+                                        'AI Feedback & Tips',
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.titleMedium?.copyWith(
+                                          color:
+                                              Theme.of(
+                                                context,
+                                              ).colorScheme.onSurfaceVariant,
+                                        ),
+                                        overflow:
+                                            TextOverflow
+                                                .ellipsis, // Handle potential overflow
+                                      ),
+                                    ),
+                                    GestureDetector(
+                                      onTap: () {
+                                        // Prevent the expand gesture when tapping the width toggle
+                                      },
+                                      child: IconButton(
+                                        icon: Icon(
+                                          _isSheetWidthExpanded
+                                              ? Icons.width_normal
+                                              : Icons.width_wide,
+                                        ),
+                                        onPressed: () {
+                                          setState(() {
+                                            _isSheetWidthExpanded =
+                                                !_isSheetWidthExpanded;
+                                          });
+                                        },
+                                        tooltip:
+                                            _isSheetWidthExpanded
+                                                ? 'Collapse width'
+                                                : 'Expand width',
+                                        color:
+                                            Theme.of(
+                                              context,
+                                            ).colorScheme.onSurfaceVariant,
+                                        iconSize: 20.0, // Adjusted icon size
+                                        padding:
+                                            EdgeInsets
+                                                .zero, // Reduce padding around icon
+                                        constraints:
+                                            const BoxConstraints(), // Reduce tap target size if needed
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ],
                           ),
@@ -534,6 +571,7 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
                                   child: Padding(
                                     padding: const EdgeInsets.all(16.0),
                                     child: Column(
+                                      mainAxisSize: MainAxisSize.min,
                                       children: [
                                         Icon(
                                           Icons.chat_outlined,
@@ -571,10 +609,17 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
                         _buildCommonQuestionsChipRow(),
                         // User Text Input Field
                         Padding(
-                          padding: const EdgeInsets.fromLTRB(8.0, 8.0, 8.0, 16.0),
+                          padding: const EdgeInsets.fromLTRB(
+                            8.0,
+                            8.0,
+                            8.0,
+                            32.0,
+                          ),
                           child: TextField(
                             controller: _messageController,
-                            enabled: !_isSendingMessage && widget.problem?.id != null,
+                            enabled:
+                                !_isSendingMessage &&
+                                widget.problem?.id != null,
                             decoration: InputDecoration(
                               hintText: 'Ask a question...',
                               border: OutlineInputBorder(
@@ -593,35 +638,45 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
                                 vertical: 12.0,
                               ),
                               suffixIcon: IconButton(
-                                icon: _isSendingMessage
-                                    ? const SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(strokeWidth: 2),
-                                      )
-                                    : Icon(
-                                        Icons.send,
-                                        color: Theme.of(context).colorScheme.primary,
-                                      ),
-                                onPressed: _isSendingMessage || widget.problem?.id == null
-                                    ? null
-                                    : () async {
-                                        final message = _messageController.text.trim();
-                                        if (message.isNotEmpty) {
-                                          _messageController.clear();
-                                          await _sendChatMessage(message);
-                                        }
-                                      },
+                                icon:
+                                    _isSendingMessage
+                                        ? const SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                        : Icon(
+                                          Icons.send,
+                                          color:
+                                              Theme.of(
+                                                context,
+                                              ).colorScheme.primary,
+                                        ),
+                                onPressed:
+                                    _isSendingMessage ||
+                                            widget.problem?.id == null
+                                        ? null
+                                        : () async {
+                                          final message =
+                                              _messageController.text.trim();
+                                          if (message.isNotEmpty) {
+                                            _messageController.clear();
+                                            await _sendChatMessage(message);
+                                          }
+                                        },
                               ),
                             ),
-                            onSubmitted: _isSendingMessage || widget.problem?.id == null
-                                ? null
-                                : (message) async {
-                                    if (message.trim().isNotEmpty) {
-                                      _messageController.clear();
-                                      await _sendChatMessage(message.trim());
-                                    }
-                                  },
+                            onSubmitted:
+                                _isSendingMessage || widget.problem?.id == null
+                                    ? null
+                                    : (message) async {
+                                      if (message.trim().isNotEmpty) {
+                                        _messageController.clear();
+                                        await _sendChatMessage(message.trim());
+                                      }
+                                    },
                           ),
                         ),
                       ],
@@ -635,269 +690,6 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
       ),
       // bottomSheet: _buildAiFeedbackBottomSheet(), // Removed, using DraggableScrollableSheet
     );
-  }
-
-  // Build feedback card with TeX rendering
-  Widget _buildFeedbackCard(AiFeedback feedback) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  _getFeedbackIcon(feedback.type),
-                  size: 16,
-                  color: _getFeedbackColor(feedback.type),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  _getFeedbackTypeLabel(feedback.type),
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: _getFeedbackColor(feedback.type),
-                    fontSize: 12,
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  _formatTimestamp(feedback.timestamp),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            // Render AI feedback with TeX support using gpt_markdown
-            Builder(
-              builder: (context) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    GptMarkdown(
-                      feedback.message,
-                  onLinkTap: (url, title) {
-                    debugPrint(url);
-                    debugPrint(title);
-                  },
-                  useDollarSignsForLatex: true,
-                  textAlign: TextAlign.justify,
-                  textScaler: const TextScaler.linear(1),
-                  style: const TextStyle(fontSize: 15),
-                  highlightBuilder: (context, text, style) {
-                    return Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 4,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.secondaryContainer,
-                        borderRadius: BorderRadius.circular(4),
-                        border: Border.all(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.secondary.withValues(alpha: 0.5),
-                          width: 1,
-                        ),
-                      ),
-                      child: Text(
-                        text,
-                        style: TextStyle(
-                          color:
-                              Theme.of(
-                                context,
-                              ).colorScheme.onSecondaryContainer,
-                          fontFamily: 'monospace',
-                          fontWeight: FontWeight.bold,
-                          fontSize:
-                              style.fontSize != null
-                                  ? style.fontSize! * 0.9
-                                  : 13.5,
-                          height: style.height,
-                        ),
-                      ),
-                    );
-                  },
-                  latexWorkaround: (tex) {
-                    List<String> stack = [];
-                    tex = tex.splitMapJoin(
-                      RegExp(r"\\text\{|\{|\}|\_"),
-                      onMatch: (p) {
-                        String input = p[0] ?? "";
-                        if (input == r"\text{") {
-                          stack.add(input);
-                        }
-                        if (stack.isNotEmpty) {
-                          if (input == r"{") {
-                            stack.add(input);
-                          }
-                          if (input == r"}") {
-                            stack.removeLast();
-                          }
-                          if (input == r"_") {
-                            return r"\_";
-                          }
-                        }
-                        return input;
-                      },
-                    );
-                    return tex.replaceAllMapped(
-                      RegExp(r"align\*"),
-                      (match) => "aligned",
-                    );
-                  },
-                  imageBuilder: (context, url) {
-                    return Image.network(url, width: 100, height: 100);
-                  },
-                  latexBuilder: (context, tex, textStyle, inline) {
-                    if (tex.contains(r"\begin{tabular}")) {
-                      // return table.
-                      String tableString =
-                          "|${(RegExp(r"^\\begin\{tabular\}\{.*?\}(.*?)\\end\{tabular\}$", multiLine: true, dotAll: true).firstMatch(tex)?[1] ?? "").trim()}|";
-                      tableString = tableString
-                          .replaceAll(r"\\", "|\n|")
-                          .replaceAll(r"\hline", "")
-                          .replaceAll(RegExp(r"(?<!\\)&"), "|");
-                      var tableStringList = tableString.split("\n")
-                        ..insert(1, "|---|");
-                      tableString = tableStringList.join("\n");
-                      return GptMarkdown(tableString);
-                    }
-                    var controller = ScrollController();
-                    Widget child = Math.tex(tex, textStyle: textStyle);
-                    if (!inline) {
-                      child = Padding(
-                        padding: const EdgeInsets.all(0.0),
-                        child: Material(
-                          color: Theme.of(context).colorScheme.onInverseSurface,
-                          child: Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Scrollbar(
-                              controller: controller,
-                              child: SingleChildScrollView(
-                                controller: controller,
-                                scrollDirection: Axis.horizontal,
-                                child: Math.tex(tex, textStyle: textStyle),
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    }
-                    child = SelectableAdapter(
-                      selectedText: tex,
-                      child: Math.tex(tex),
-                    );
-                    child = InkWell(
-                      onTap: () {
-                        debugPrint("Hello world");
-                      },
-                      child: child,
-                    );
-                    return child;
-                  },
-                  sourceTagBuilder: (buildContext, string, textStyle) {
-                    var value = int.tryParse(string);
-                    value ??= -1;
-                    value += 1;
-                    return SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.red,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Center(child: Text("$value")),
-                      ),
-                    );
-                  },
-                  linkBuilder: (context, label, path, style) {
-                    return Text(
-                      label,
-                      style: style.copyWith(color: Colors.blue),
-                    );
-                  },
-                ),
-                    // Show typing indicator if this is the streaming feedback
-                    if (feedback.id == 'streaming-temp' && _isGeneratingFeedback)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8.0),
-                        child: Row(
-                          children: [
-                            SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  Theme.of(context).colorScheme.primary,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'AIが回答を生成中...',
-                              style: TextStyle(
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                fontSize: 12,
-                                fontStyle: FontStyle.italic,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  IconData _getFeedbackIcon(FeedbackType type) {
-    switch (type) {
-      case FeedbackType.correction:
-        return Icons.edit;
-      case FeedbackType.explanation:
-        return Icons.lightbulb;
-      case FeedbackType.encouragement:
-        return Icons.thumb_up;
-      case FeedbackType.suggestion:
-        return Icons.tips_and_updates;
-    }
-  }
-
-  Color _getFeedbackColor(FeedbackType type) {
-    switch (type) {
-      case FeedbackType.correction:
-        return Colors.orange;
-      case FeedbackType.explanation:
-        return Colors.blue;
-      case FeedbackType.encouragement:
-        return Colors.green;
-      case FeedbackType.suggestion:
-        return Colors.purple;
-    }
-  }
-
-  String _getFeedbackTypeLabel(FeedbackType type) {
-    switch (type) {
-      case FeedbackType.correction:
-        return '訂正';
-      case FeedbackType.explanation:
-        return '説明';
-      case FeedbackType.encouragement:
-        return '励まし';
-      case FeedbackType.suggestion:
-        return '提案';
-    }
   }
 
   String _formatTimestamp(DateTime timestamp) {
@@ -934,17 +726,21 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
           maxWidth: MediaQuery.of(context).size.width * 0.75,
         ),
         decoration: BoxDecoration(
-          color: isUser
-              ? Theme.of(context).colorScheme.primaryContainer
-              : Theme.of(context).colorScheme.secondaryContainer,
+          color:
+              isUser
+                  ? Theme.of(context).colorScheme.primaryContainer
+                  : Theme.of(context).colorScheme.secondaryContainer,
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(16),
             topRight: const Radius.circular(16),
-            bottomLeft: isUser ? const Radius.circular(16) : const Radius.circular(4),
-            bottomRight: isUser ? const Radius.circular(4) : const Radius.circular(16),
+            bottomLeft:
+                isUser ? const Radius.circular(16) : const Radius.circular(4),
+            bottomRight:
+                isUser ? const Radius.circular(4) : const Radius.circular(16),
           ),
         ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (isUser)
@@ -957,6 +753,7 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
             else
               // For AI messages, use GptMarkdown for proper markdown and LaTeX rendering
               Column(
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   GptMarkdown(
@@ -978,20 +775,30 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.5),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.primaryContainer.withValues(alpha: 0.5),
                           borderRadius: BorderRadius.circular(4),
                           border: Border.all(
-                            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.primary.withValues(alpha: 0.5),
                             width: 1,
                           ),
                         ),
                         child: Text(
                           text,
                           style: TextStyle(
-                            color: Theme.of(context).colorScheme.onPrimaryContainer,
+                            color:
+                                Theme.of(
+                                  context,
+                                ).colorScheme.onPrimaryContainer,
                             fontFamily: 'monospace',
                             fontWeight: FontWeight.bold,
-                            fontSize: style.fontSize != null ? style.fontSize! * 0.9 : 13.5,
+                            fontSize:
+                                style.fontSize != null
+                                    ? style.fontSize! * 0.9
+                                    : 13.5,
                             height: style.height,
                           ),
                         ),
@@ -1048,7 +855,8 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
                         child = Padding(
                           padding: const EdgeInsets.all(0.0),
                           child: Material(
-                            color: Theme.of(context).colorScheme.onInverseSurface,
+                            color:
+                                Theme.of(context).colorScheme.onInverseSurface,
                             child: Padding(
                               padding: const EdgeInsets.all(8.0),
                               child: Scrollbar(
@@ -1118,7 +926,10 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
                           Text(
                             'Typing...',
                             style: TextStyle(
-                              color: Theme.of(context).colorScheme.onSecondaryContainer.withValues(alpha: 0.7),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSecondaryContainer
+                                  .withValues(alpha: 0.7),
                               fontSize: 12,
                               fontStyle: FontStyle.italic,
                             ),
@@ -1132,9 +943,13 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
             Text(
               _formatTimestamp(timestamp),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: isUser
-                    ? Theme.of(context).colorScheme.onPrimaryContainer.withValues(alpha: 0.7)
-                    : Theme.of(context).colorScheme.onSecondaryContainer.withValues(alpha: 0.7),
+                color:
+                    isUser
+                        ? Theme.of(
+                          context,
+                        ).colorScheme.onPrimaryContainer.withValues(alpha: 0.7)
+                        : Theme.of(context).colorScheme.onSecondaryContainer
+                            .withValues(alpha: 0.7),
                 fontSize: 11,
               ),
             ),
@@ -1144,7 +959,6 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
     );
   }
 
-
   Widget _buildCommonQuestionsChipRow() {
     final List<String> commonQuestions = [
       "How do I solve for x?",
@@ -1153,7 +967,7 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
       "What's the integral of 1/x?",
       "What's the quadratic formula?",
       "How do I find the area of a circle?",
-      "How do I find circumference?"
+      "How do I find circumference?",
     ];
 
     return Padding(
@@ -1175,11 +989,12 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
                       color: Theme.of(context).colorScheme.primary,
                     ),
                     label: Text(question),
-                    onPressed: _isSendingMessage || widget.problem?.id == null
-                        ? null
-                        : () async {
-                            await _sendChatMessage(question);
-                          },
+                    onPressed:
+                        _isSendingMessage || widget.problem?.id == null
+                            ? null
+                            : () async {
+                              await _sendChatMessage(question);
+                            },
                     backgroundColor:
                         Theme.of(context).colorScheme.surfaceContainer,
                     labelStyle: TextStyle(
