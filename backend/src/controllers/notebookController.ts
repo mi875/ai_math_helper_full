@@ -3,7 +3,7 @@ import { db } from '../db/client.js';
 import { notebooks, mathProblems, users, problemImages, aiFeedbacks } from '../db/schema.js';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
-import { processProblemImage, deleteProblemImages, generateImageUrl } from '../middleware/fileUploadMiddleware.js';
+import { processProblemImage, deleteProblemImages } from '../middleware/fileUploadMiddleware.js';
 import path from 'path';
 import { mastra } from '../mastra/index.js';
 import fs from "fs";
@@ -696,6 +696,10 @@ export const notebookController = {
       }
       
       const canvasImageFile = files[0]; // Get the first (and only) uploaded file
+      
+      // Extract custom message from form data if provided
+      const formData = await c.req.formData();
+      const customMessage = formData.get('customMessage') as string || null;
 
       // Find the problem
       const problem = await db
@@ -738,13 +742,19 @@ export const notebookController = {
 
       // Call mathHelper agent with both images
       const mathHelperAgent = mastra.getAgent('mathHelperAgent');
+      
+      // Create prompt based on custom message or default
+      const promptText = customMessage 
+        ? `User question: ${customMessage}\n\nPlease analyze the original math problem and the user's handwritten solution, then answer the user's question. Provide educational feedback in Japanese with TeX notation for mathematical expressions.`
+        : "Please analyze the original math problem and the user's handwritten solution. Provide educational feedback in Japanese with TeX notation for mathematical expressions.";
+      
       const result = await mathHelperAgent.generate([
         {
           role: 'user',
           content: [
             {
               type: 'text',
-              text: "Please analyze the original math problem and the user's handwritten solution. Provide educational feedback in Japanese with TeX notation for mathematical expressions."
+              text: promptText
             },
             {
              type: 'image',
@@ -854,6 +864,11 @@ export const notebookController = {
       
       console.log('Files from middleware:', files?.length || 0);
       
+      // Extract custom message from form data if provided
+      const formData = await c.req.formData();
+      const customMessage = formData.get('customMessage') as string || null;
+      console.log('Custom message received:', customMessage);
+      
       if (!files || files.length === 0) {
         const errorData = JSON.stringify({
           success: false,
@@ -940,13 +955,18 @@ export const notebookController = {
             // Generate unique feedback ID
             feedbackId = randomUUID();
             
+            // Create prompt based on custom message or default
+            const promptText = customMessage 
+              ? `User question: ${customMessage}\n\nPlease analyze the original math problem and the user's handwritten solution, then answer the user's question. Provide educational feedback in Japanese with TeX notation for mathematical expressions.`
+              : "Please analyze the original math problem and the user's handwritten solution. Provide educational feedback in Japanese with TeX notation for mathematical expressions.";
+            
             const result = await mathHelperAgent.generate([
               {
                 role: 'user',
                 content: [
                   {
                     type: 'text',
-                    text: "Please analyze the original math problem and the user's handwritten solution. Provide educational feedback in Japanese with TeX notation for mathematical expressions."
+                    text: promptText
                   },
                   {
                     type: 'image',

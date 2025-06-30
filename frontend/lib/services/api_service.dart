@@ -206,7 +206,6 @@ class ApiService {
     }
   }
 
-
   // Token Management
   static Future<Map<String, dynamic>?> getTokenStatus() async {
     try {
@@ -369,7 +368,10 @@ class ApiService {
   }
 
   // Problem Image Management
-  static Future<List<Map<String, dynamic>>?> uploadProblemImages(List<XFile> imageFiles, String problemId) async {
+  static Future<List<Map<String, dynamic>>?> uploadProblemImages(
+    List<XFile> imageFiles,
+    String problemId,
+  ) async {
     try {
       final token = await _getAuthToken();
       if (token == null) return null;
@@ -396,14 +398,16 @@ class ApiService {
       // Add each image file
       for (int i = 0; i < imageFiles.length; i++) {
         final imageFile = imageFiles[i];
-        
+
         // Validate file size (10MB limit as per backend)
         final file = File(imageFile.path);
         final fileSize = await file.length();
         const maxSizeBytes = 10 * 1024 * 1024; // 10MB
 
         if (fileSize > maxSizeBytes) {
-          debugPrint('File too large: ${fileSize / (1024 * 1024)}MB (max 10MB)');
+          debugPrint(
+            'File too large: ${fileSize / (1024 * 1024)}MB (max 10MB)',
+          );
           return null;
         }
 
@@ -509,17 +513,22 @@ class ApiService {
         final data = json.decode(utf8.decode(response.bodyBytes));
         final problemData = data['data'];
         debugPrint('Problem created successfully: ${problemData['uid']}');
-        
+
         // Upload images if provided
         if (imageFiles != null && imageFiles.isNotEmpty) {
           debugPrint('Uploading ${imageFiles.length} images for problem');
-          final uploadedImages = await uploadProblemImages(imageFiles, problemData['uid']);
+          final uploadedImages = await uploadProblemImages(
+            imageFiles,
+            problemData['uid'],
+          );
           if (uploadedImages != null) {
             // Add uploaded images to the problem data
             problemData['images'] = uploadedImages;
             debugPrint('Images uploaded successfully');
           } else {
-            debugPrint('Warning: Failed to upload images, but problem was created');
+            debugPrint(
+              'Warning: Failed to upload images, but problem was created',
+            );
             // Problem was created successfully, but images failed
             // Still return the problem data, but with empty images
             problemData['images'] = [];
@@ -528,7 +537,7 @@ class ApiService {
           // No images to upload
           problemData['images'] = [];
         }
-        
+
         return problemData;
       } else {
         debugPrint('Failed to create problem: ${response.statusCode}');
@@ -571,17 +580,22 @@ class ApiService {
       if (response.statusCode == 200) {
         final data = json.decode(utf8.decode(response.bodyBytes));
         final problemData = data['data'];
-        
+
         // Upload new images if provided
         if (newImageFiles != null && newImageFiles.isNotEmpty) {
-          final uploadedImages = await uploadProblemImages(newImageFiles, problemUid);
+          final uploadedImages = await uploadProblemImages(
+            newImageFiles,
+            problemUid,
+          );
           if (uploadedImages != null) {
             // Add new images to existing ones
-            final existingImages = List<Map<String, dynamic>>.from(problemData['images'] ?? []);
+            final existingImages = List<Map<String, dynamic>>.from(
+              problemData['images'] ?? [],
+            );
             problemData['images'] = [...existingImages, ...uploadedImages];
           }
         }
-        
+
         return problemData;
       } else {
         debugPrint('Failed to update problem: ${response.statusCode}');
@@ -620,8 +634,9 @@ class ApiService {
   // AI Feedback Methods
   static Future<AiFeedback?> generateAiFeedback(
     String problemUid,
-    Uint8List canvasImageBytes,
-  ) async {
+    Uint8List canvasImageBytes, {
+    String? customMessage,
+  }) async {
     try {
       final token = await _getAuthToken();
       if (token == null) return null;
@@ -645,13 +660,18 @@ class ApiService {
         ),
       );
 
+      // Add custom message if provided
+      if (customMessage != null) {
+        request.fields['customMessage'] = customMessage;
+      }
+
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 201) {
         final data = json.decode(utf8.decode(response.bodyBytes));
         final feedbackData = data['data'];
-        
+
         return AiFeedback(
           id: feedbackData['id'],
           message: feedbackData['message'],
@@ -672,8 +692,9 @@ class ApiService {
   // Stream AI feedback generation in real-time
   static Stream<Map<String, dynamic>> streamAiFeedback(
     String problemUid,
-    Uint8List canvasImageBytes,
-  ) async* {
+    Uint8List canvasImageBytes, {
+    String? customMessage,
+  }) async* {
     try {
       final token = await _getAuthToken();
       if (token == null) {
@@ -700,15 +721,25 @@ class ApiService {
         ),
       );
 
+      // Add custom message if provided
+      if (customMessage != null) {
+        request.fields['customMessage'] = customMessage;
+      }
+
       final streamedResponse = await request.send();
 
       if (streamedResponse.statusCode != 200) {
-        yield {'type': 'error', 'error': 'Failed to start streaming: ${streamedResponse.statusCode}'};
+        yield {
+          'type': 'error',
+          'error': 'Failed to start streaming: ${streamedResponse.statusCode}',
+        };
         return;
       }
 
       // Parse Server-Sent Events stream
-      await for (final chunk in streamedResponse.stream.transform(utf8.decoder).transform(LineSplitter())) {
+      await for (final chunk in streamedResponse.stream
+          .transform(utf8.decoder)
+          .transform(LineSplitter())) {
         if (chunk.startsWith('data: ')) {
           final jsonData = chunk.substring(6); // Remove 'data: ' prefix
           if (jsonData.trim().isNotEmpty) {
@@ -717,7 +748,10 @@ class ApiService {
               yield data;
             } catch (e) {
               debugPrint('Error parsing SSE data: $e');
-              yield {'type': 'error', 'error': 'Failed to parse streaming data'};
+              yield {
+                'type': 'error',
+                'error': 'Failed to parse streaming data',
+              };
             }
           }
         }
@@ -728,7 +762,9 @@ class ApiService {
     }
   }
 
-  static Future<List<AiFeedback>?> getProblemFeedbacks(String problemUid) async {
+  static Future<List<AiFeedback>?> getProblemFeedbacks(
+    String problemUid,
+  ) async {
     try {
       final token = await _getAuthToken();
       if (token == null) return null;
@@ -741,13 +777,17 @@ class ApiService {
       if (response.statusCode == 200) {
         final data = json.decode(utf8.decode(response.bodyBytes));
         final feedbacksList = data['data'] as List;
-        
-        return feedbacksList.map((feedbackData) => AiFeedback(
-          id: feedbackData['id'],
-          message: feedbackData['message'],
-          timestamp: DateTime.parse(feedbackData['timestamp']),
-          type: _parseFeedbackType(feedbackData['type']),
-        )).toList();
+
+        return feedbacksList
+            .map(
+              (feedbackData) => AiFeedback(
+                id: feedbackData['id'],
+                message: feedbackData['message'],
+                timestamp: DateTime.parse(feedbackData['timestamp']),
+                type: _parseFeedbackType(feedbackData['type']),
+              ),
+            )
+            .toList();
       } else {
         debugPrint('Failed to get problem feedbacks: ${response.statusCode}');
         return null;

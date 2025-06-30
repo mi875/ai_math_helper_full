@@ -33,6 +33,11 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
   List<AiFeedback> _aiFeedbacks = [];
   bool _isGeneratingFeedback = false;
   final GlobalKey _scribbleKey = GlobalKey();
+  
+  // Chat message state
+  final TextEditingController _messageController = TextEditingController();
+  bool _isSendingMessage = false;
+  List<Map<String, dynamic>> _chatMessages = []; // Store both user and AI messages
 
   @override
   void initState() {
@@ -77,147 +82,8 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
   String _currentStreamingText = '';
 
   Future<void> _generateAiFeedback() async {
-    if (widget.problem?.id == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('No problem selected')));
-      return;
-    }
-
-    setState(() {
-      _isGeneratingFeedback = true;
-      _currentStreamingText = '';
-    });
-
-    try {
-      // Convert scribble canvas to image
-      final canvasImageBytes = await _captureCanvasAsImage();
-
-      if (canvasImageBytes == null) {
-        throw Exception('Failed to capture canvas image');
-      }
-
-      // Create a temporary feedback object for streaming display
-      final tempFeedback = AiFeedback(
-        id: 'streaming-temp',
-        message: '',
-        timestamp: DateTime.now(),
-        type: FeedbackType.suggestion,
-      );
-
-      setState(() {
-        _aiFeedbacks.insert(0, tempFeedback);
-      });
-
-      // Start streaming AI feedback with fallback
-      try {
-        await for (final chunk in ApiService.streamAiFeedback(
-          widget.problem!.id,
-          canvasImageBytes,
-        )) {
-        if (!mounted) break;
-
-        switch (chunk['type']) {
-          case 'start':
-            setState(() {
-              _currentStreamingText = chunk['message'] ?? 'AI分析を開始しています...';
-              _aiFeedbacks[0] = _aiFeedbacks[0].copyWith(
-                message: _currentStreamingText,
-              );
-            });
-            break;
-
-          case 'chunk':
-            setState(() {
-              _currentStreamingText = chunk['fullText'] ?? '';
-              _aiFeedbacks[0] = _aiFeedbacks[0].copyWith(
-                message: _currentStreamingText,
-              );
-            });
-            break;
-
-          case 'complete':
-            final completedFeedback = AiFeedback(
-              id: chunk['id'],
-              message: chunk['message'],
-              timestamp: DateTime.parse(chunk['timestamp']),
-              type: _parseFeedbackType(chunk['feedbackType']),
-            );
-            
-            setState(() {
-              _aiFeedbacks[0] = completedFeedback;
-            });
-
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(const SnackBar(content: Text('AI feedback generated!')));
-            break;
-
-          case 'error':
-            setState(() {
-              _aiFeedbacks.removeAt(0); // Remove temporary feedback
-            });
-            throw Exception(chunk['error'] ?? 'Unknown streaming error');
-        }
-      }
-      } catch (streamingError) {
-        debugPrint('Streaming failed: $streamingError');
-        
-        // Fallback to original non-streaming API
-        try {
-          setState(() {
-            _currentStreamingText = 'ストリーミングに失敗しました。通常のAPIを使用しています...';
-            _aiFeedbacks[0] = _aiFeedbacks[0].copyWith(
-              message: _currentStreamingText,
-            );
-          });
-
-          final feedback = await ApiService.generateAiFeedback(
-            widget.problem!.id,
-            canvasImageBytes,
-          );
-
-          if (feedback != null) {
-            setState(() {
-              _aiFeedbacks[0] = feedback;
-            });
-            
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(const SnackBar(
-              content: Text('AI feedback generated (fallback mode)'),
-              backgroundColor: Colors.orange,
-            ));
-          } else {
-            throw Exception('Fallback API also failed');
-          }
-        } catch (fallbackError) {
-          // Remove temporary feedback if both streaming and fallback failed
-          if (_aiFeedbacks.isNotEmpty && _aiFeedbacks[0].id == 'streaming-temp') {
-            setState(() {
-              _aiFeedbacks.removeAt(0);
-            });
-          }
-          throw Exception('Both streaming and fallback failed: $fallbackError');
-        }
-      }
-    } catch (error) {
-      // Remove temporary feedback if still present
-      if (_aiFeedbacks.isNotEmpty && _aiFeedbacks[0].id == 'streaming-temp') {
-        setState(() {
-          _aiFeedbacks.removeAt(0);
-        });
-      }
-      
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error: $error')));
-    } finally {
-      setState(() {
-        _isGeneratingFeedback = false;
-        _currentStreamingText = '';
-      });
-    }
+    // Use the chat message system for AI feedback
+    await _sendChatMessage("Please analyze my solution and provide feedback");
   }
 
   FeedbackType _parseFeedbackType(String typeString) {
@@ -231,6 +97,186 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
       case 'suggestion':
       default:
         return FeedbackType.suggestion;
+    }
+  }
+
+  // Send chat message to AI
+  Future<void> _sendChatMessage(String message) async {
+    if (message.trim().isEmpty || widget.problem?.id == null) {
+      return;
+    }
+
+    // Add user message to chat
+    setState(() {
+      _isSendingMessage = true;
+      _chatMessages.insert(0, {
+        'id': 'user-${DateTime.now().millisecondsSinceEpoch}',
+        'message': message,
+        'timestamp': DateTime.now(),
+        'sender': 'user',
+      });
+    });
+
+    try {
+      // Get canvas image if available
+      final canvasImageBytes = await _captureCanvasAsImage();
+
+      // Create a temporary feedback object for streaming display
+      final tempFeedback = AiFeedback(
+        id: 'streaming-temp',
+        message: '',
+        timestamp: DateTime.now(),
+        type: FeedbackType.suggestion,
+      );
+
+      // Add temporary AI message to chat
+      setState(() {
+        _aiFeedbacks.insert(0, tempFeedback);
+        _chatMessages.insert(0, {
+          'id': 'ai-streaming-temp',
+          'message': '',
+          'timestamp': DateTime.now(),
+          'sender': 'ai',
+          'isStreaming': true,
+        });
+      });
+
+      // Start streaming AI response to the chat message
+      try {
+        await for (final chunk in ApiService.streamAiFeedback(
+          widget.problem!.id,
+          canvasImageBytes ?? Uint8List(0),
+          customMessage: message,
+        )) {
+          if (!mounted) break;
+
+          switch (chunk['type']) {
+            case 'start':
+              setState(() {
+                _currentStreamingText = chunk['message'] ?? 'AI is responding...';
+                _aiFeedbacks[0] = _aiFeedbacks[0].copyWith(
+                  message: _currentStreamingText,
+                );
+                _chatMessages[0] = {
+                  ..._chatMessages[0],
+                  'message': _currentStreamingText,
+                };
+              });
+              break;
+
+            case 'chunk':
+              setState(() {
+                _currentStreamingText = chunk['fullText'] ?? '';
+                _aiFeedbacks[0] = _aiFeedbacks[0].copyWith(
+                  message: _currentStreamingText,
+                );
+                _chatMessages[0] = {
+                  ..._chatMessages[0],
+                  'message': _currentStreamingText,
+                };
+              });
+              break;
+
+            case 'complete':
+              final completedFeedback = AiFeedback(
+                id: chunk['id'],
+                message: chunk['message'],
+                timestamp: DateTime.parse(chunk['timestamp']),
+                type: _parseFeedbackType(chunk['feedbackType']),
+              );
+              
+              setState(() {
+                _aiFeedbacks[0] = completedFeedback;
+                _chatMessages[0] = {
+                  'id': chunk['id'],
+                  'message': chunk['message'],
+                  'timestamp': DateTime.parse(chunk['timestamp']),
+                  'sender': 'ai',
+                  'feedbackType': chunk['feedbackType'],
+                  'isStreaming': false,
+                };
+              });
+              break;
+
+            case 'error':
+              setState(() {
+                _aiFeedbacks.removeAt(0);
+                _chatMessages.removeAt(0);
+              });
+              throw Exception(chunk['error'] ?? 'Unknown streaming error');
+          }
+        }
+      } catch (streamingError) {
+        debugPrint('Streaming failed: $streamingError');
+        
+        // Fallback to original non-streaming API
+        try {
+          setState(() {
+            _currentStreamingText = 'Streaming failed. Using regular API...';
+            _aiFeedbacks[0] = _aiFeedbacks[0].copyWith(
+              message: _currentStreamingText,
+            );
+            _chatMessages[0] = {
+              ..._chatMessages[0],
+              'message': _currentStreamingText,
+            };
+          });
+
+          final feedback = await ApiService.generateAiFeedback(
+            widget.problem!.id,
+            canvasImageBytes ?? Uint8List(0),
+            customMessage: message,
+          );
+
+          if (feedback != null) {
+            setState(() {
+              _aiFeedbacks[0] = feedback;
+              _chatMessages[0] = {
+                'id': feedback.id,
+                'message': feedback.message,
+                'timestamp': feedback.timestamp,
+                'sender': 'ai',
+                'feedbackType': feedback.type.toString().split('.').last,
+                'isStreaming': false,
+              };
+            });
+          } else {
+            throw Exception('Fallback API also failed');
+          }
+        } catch (fallbackError) {
+          if (_aiFeedbacks.isNotEmpty && _aiFeedbacks[0].id == 'streaming-temp') {
+            setState(() {
+              _aiFeedbacks.removeAt(0);
+            });
+          }
+          if (_chatMessages.isNotEmpty && _chatMessages[0]['id'] == 'ai-streaming-temp') {
+            setState(() {
+              _chatMessages.removeAt(0);
+            });
+          }
+          throw Exception('Both streaming and fallback failed: $fallbackError');
+        }
+      }
+    } catch (error) {
+      if (_aiFeedbacks.isNotEmpty && _aiFeedbacks[0].id == 'streaming-temp') {
+        setState(() {
+          _aiFeedbacks.removeAt(0);
+        });
+      }
+      if (_chatMessages.isNotEmpty && _chatMessages[0]['id'] == 'ai-streaming-temp') {
+        setState(() {
+          _chatMessages.removeAt(0);
+        });
+      }
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error sending message: $error')),
+      );
+    } finally {
+      setState(() {
+        _isSendingMessage = false;
+        _currentStreamingText = '';
+      });
     }
   }
 
@@ -259,6 +305,7 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
   void dispose() {
     notifier.dispose();
     _transformationController.dispose();
+    _messageController.dispose();
     super.dispose();
   }
 
@@ -407,7 +454,7 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
                               decoration: BoxDecoration(
                                 color: Theme.of(
                                   context,
-                                ).colorScheme.onSurfaceVariant.withOpacity(0.4),
+                                ).colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
                                 borderRadius: BorderRadius.circular(2.0),
                               ),
                             ),
@@ -481,15 +528,15 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
                               vertical: 8.0,
                             ), // Adjusted for chat bubbles
                             children: [
-                              // Display AI Feedbacks
-                              if (_aiFeedbacks.isEmpty)
+                              // Display Chat Messages
+                              if (_chatMessages.isEmpty)
                                 Center(
                                   child: Padding(
                                     padding: const EdgeInsets.all(16.0),
                                     child: Column(
                                       children: [
                                         Icon(
-                                          Icons.psychology_outlined,
+                                          Icons.chat_outlined,
                                           size: 48,
                                           color:
                                               Theme.of(
@@ -498,7 +545,7 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
                                         ),
                                         const SizedBox(height: 8),
                                         Text(
-                                          'Tap "AI Help" to get feedback on your solution',
+                                          'Ask a question or tap "AI Help" for feedback',
                                           style: Theme.of(
                                             context,
                                           ).textTheme.bodyMedium?.copyWith(
@@ -514,8 +561,8 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
                                   ),
                                 )
                               else
-                                ..._aiFeedbacks.map(
-                                  (feedback) => _buildFeedbackCard(feedback),
+                                ..._chatMessages.map(
+                                  (message) => _buildChatBubble(message),
                                 ),
                             ],
                           ),
@@ -524,8 +571,10 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
                         _buildCommonQuestionsChipRow(),
                         // User Text Input Field
                         Padding(
-                          padding: const EdgeInsets.all(8.0),
+                          padding: const EdgeInsets.fromLTRB(8.0, 8.0, 8.0, 16.0),
                           child: TextField(
+                            controller: _messageController,
+                            enabled: !_isSendingMessage && widget.problem?.id != null,
                             decoration: InputDecoration(
                               hintText: 'Ask a question...',
                               border: OutlineInputBorder(
@@ -544,15 +593,35 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
                                 vertical: 12.0,
                               ),
                               suffixIcon: IconButton(
-                                icon: Icon(
-                                  Icons.send,
-                                  color: Theme.of(context).colorScheme.primary,
-                                ),
-                                onPressed: () {
-                                  print('Send button tapped');
-                                },
+                                icon: _isSendingMessage
+                                    ? const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(strokeWidth: 2),
+                                      )
+                                    : Icon(
+                                        Icons.send,
+                                        color: Theme.of(context).colorScheme.primary,
+                                      ),
+                                onPressed: _isSendingMessage || widget.problem?.id == null
+                                    ? null
+                                    : () async {
+                                        final message = _messageController.text.trim();
+                                        if (message.isNotEmpty) {
+                                          _messageController.clear();
+                                          await _sendChatMessage(message);
+                                        }
+                                      },
                               ),
                             ),
+                            onSubmitted: _isSendingMessage || widget.problem?.id == null
+                                ? null
+                                : (message) async {
+                                    if (message.trim().isNotEmpty) {
+                                      _messageController.clear();
+                                      await _sendChatMessage(message.trim());
+                                    }
+                                  },
                           ),
                         ),
                       ],
@@ -801,7 +870,6 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
       case FeedbackType.encouragement:
         return Icons.thumb_up;
       case FeedbackType.suggestion:
-      default:
         return Icons.tips_and_updates;
     }
   }
@@ -815,7 +883,6 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
       case FeedbackType.encouragement:
         return Colors.green;
       case FeedbackType.suggestion:
-      default:
         return Colors.purple;
     }
   }
@@ -829,7 +896,6 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
       case FeedbackType.encouragement:
         return '励まし';
       case FeedbackType.suggestion:
-      default:
         return '提案';
     }
   }
@@ -852,61 +918,242 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
   // _buildAiFeedbackBottomSheet() is no longer used for the primary layout.
   // It can be removed if not needed elsewhere.
 
-  // Re-introducing _buildChatMessage helper for styling
-  Widget _buildChatMessage(
-    BuildContext context,
-    String text, {
-    bool isUser = false,
-  }) {
-    final alignment = isUser ? Alignment.centerRight : Alignment.centerLeft;
-    final bubbleColor =
-        isUser
-            ? Theme.of(context).colorScheme.secondaryContainer
-            : Theme.of(context).colorScheme.primaryContainer;
-    final textColor =
-        isUser
-            ? Theme.of(context).colorScheme.onSecondaryContainer
-            : Theme.of(context).colorScheme.onPrimaryContainer;
-    final borderRadius =
-        isUser
-            ? const BorderRadius.all(
-              Radius.circular(16.0),
-            ).copyWith(bottomRight: const Radius.circular(4))
-            : const BorderRadius.all(
-              Radius.circular(16.0),
-            ).copyWith(bottomLeft: const Radius.circular(4));
+  // Build chat bubble for both user and AI messages
+  Widget _buildChatBubble(Map<String, dynamic> message) {
+    final isUser = message['sender'] == 'user';
+    final isStreaming = message['isStreaming'] == true;
+    final messageText = message['message'] as String;
+    final timestamp = message['timestamp'] as DateTime;
 
     return Align(
-      alignment: alignment,
+      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
         padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 10.0),
         constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.70,
-        ), // Max width for bubble
-        decoration: BoxDecoration(
-          color: bubbleColor,
-          borderRadius: borderRadius,
+          maxWidth: MediaQuery.of(context).size.width * 0.75,
         ),
-        child: Text(
-          text,
-          style: Theme.of(
-            context,
-          ).textTheme.bodyMedium?.copyWith(color: textColor),
+        decoration: BoxDecoration(
+          color: isUser
+              ? Theme.of(context).colorScheme.primaryContainer
+              : Theme.of(context).colorScheme.secondaryContainer,
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(16),
+            topRight: const Radius.circular(16),
+            bottomLeft: isUser ? const Radius.circular(16) : const Radius.circular(4),
+            bottomRight: isUser ? const Radius.circular(4) : const Radius.circular(16),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (isUser)
+              Text(
+                messageText,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                ),
+              )
+            else
+              // For AI messages, use GptMarkdown for proper markdown and LaTeX rendering
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  GptMarkdown(
+                    messageText,
+                    onLinkTap: (url, title) {
+                      debugPrint(url);
+                      debugPrint(title);
+                    },
+                    useDollarSignsForLatex: true,
+                    textAlign: TextAlign.start,
+                    textScaler: const TextScaler.linear(1),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSecondaryContainer,
+                    ),
+                    highlightBuilder: (context, text, style) {
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.5),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(
+                            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+                            width: 1,
+                          ),
+                        ),
+                        child: Text(
+                          text,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onPrimaryContainer,
+                            fontFamily: 'monospace',
+                            fontWeight: FontWeight.bold,
+                            fontSize: style.fontSize != null ? style.fontSize! * 0.9 : 13.5,
+                            height: style.height,
+                          ),
+                        ),
+                      );
+                    },
+                    latexWorkaround: (tex) {
+                      List<String> stack = [];
+                      tex = tex.splitMapJoin(
+                        RegExp(r"\\text\{|\{|\}|\_"),
+                        onMatch: (p) {
+                          String input = p[0] ?? "";
+                          if (input == r"\text{") {
+                            stack.add(input);
+                          }
+                          if (stack.isNotEmpty) {
+                            if (input == r"{") {
+                              stack.add(input);
+                            }
+                            if (input == r"}") {
+                              stack.removeLast();
+                            }
+                            if (input == r"_") {
+                              return r"\_";
+                            }
+                          }
+                          return input;
+                        },
+                      );
+                      return tex.replaceAllMapped(
+                        RegExp(r"align\*"),
+                        (match) => "aligned",
+                      );
+                    },
+                    imageBuilder: (context, url) {
+                      return Image.network(url, width: 100, height: 100);
+                    },
+                    latexBuilder: (context, tex, textStyle, inline) {
+                      if (tex.contains(r"\begin{tabular}")) {
+                        // return table.
+                        String tableString =
+                            "|${(RegExp(r"^\\begin\{tabular\}\{.*?\}(.*?)\\end\{tabular\}$", multiLine: true, dotAll: true).firstMatch(tex)?[1] ?? "").trim()}|";
+                        tableString = tableString
+                            .replaceAll(r"\\", "|\n|")
+                            .replaceAll(r"\hline", "")
+                            .replaceAll(RegExp(r"(?<!\\)&"), "|");
+                        var tableStringList = tableString.split("\n")
+                          ..insert(1, "|---|");
+                        tableString = tableStringList.join("\n");
+                        return GptMarkdown(tableString);
+                      }
+                      var controller = ScrollController();
+                      Widget child = Math.tex(tex, textStyle: textStyle);
+                      if (!inline) {
+                        child = Padding(
+                          padding: const EdgeInsets.all(0.0),
+                          child: Material(
+                            color: Theme.of(context).colorScheme.onInverseSurface,
+                            child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Scrollbar(
+                                controller: controller,
+                                child: SingleChildScrollView(
+                                  controller: controller,
+                                  scrollDirection: Axis.horizontal,
+                                  child: Math.tex(tex, textStyle: textStyle),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      }
+                      child = SelectableAdapter(
+                        selectedText: tex,
+                        child: Math.tex(tex),
+                      );
+                      child = InkWell(
+                        onTap: () {
+                          debugPrint("Hello world");
+                        },
+                        child: child,
+                      );
+                      return child;
+                    },
+                    sourceTagBuilder: (buildContext, string, textStyle) {
+                      var value = int.tryParse(string);
+                      value ??= -1;
+                      value += 1;
+                      return SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Center(child: Text("$value")),
+                        ),
+                      );
+                    },
+                    linkBuilder: (context, label, path, style) {
+                      return Text(
+                        label,
+                        style: style.copyWith(color: Colors.blue),
+                      );
+                    },
+                  ),
+                  if (isStreaming)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Theme.of(context).colorScheme.primary,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Typing...',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.onSecondaryContainer.withValues(alpha: 0.7),
+                              fontSize: 12,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            const SizedBox(height: 4),
+            Text(
+              _formatTimestamp(timestamp),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: isUser
+                    ? Theme.of(context).colorScheme.onPrimaryContainer.withValues(alpha: 0.7)
+                    : Theme.of(context).colorScheme.onSecondaryContainer.withValues(alpha: 0.7),
+                fontSize: 11,
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
+
   Widget _buildCommonQuestionsChipRow() {
     final List<String> commonQuestions = [
-      "How to solve for x?",
-      "Pythagorean theorem?", // Shortened for chips
-      "Derivative of x^n?",
-      "Integral of 1/x?",
-      "Quadratic Formula?",
-      "Area of a Circle?",
-      "Circumference?", // Shortened
+      "How do I solve for x?",
+      "What is the Pythagorean theorem?",
+      "What's the derivative of x^n?",
+      "What's the integral of 1/x?",
+      "What's the quadratic formula?",
+      "How do I find the area of a circle?",
+      "How do I find circumference?"
     ];
 
     return Padding(
@@ -928,10 +1175,11 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
                       color: Theme.of(context).colorScheme.primary,
                     ),
                     label: Text(question),
-                    onPressed: () {
-                      // Handle chip tap
-                      print('Tapped: $question');
-                    },
+                    onPressed: _isSendingMessage || widget.problem?.id == null
+                        ? null
+                        : () async {
+                            await _sendChatMessage(question);
+                          },
                     backgroundColor:
                         Theme.of(context).colorScheme.surfaceContainer,
                     labelStyle: TextStyle(
