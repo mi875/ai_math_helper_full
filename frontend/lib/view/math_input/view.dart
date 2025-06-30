@@ -44,7 +44,7 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
   @override
   void initState() {
     super.initState();
-    notifier = ScribbleNotifier(widths: [2]);
+    notifier = ScribbleNotifier(fixedStrokeWidth: 2);
     _transformationController = TransformationController();
     _draggableController = DraggableScrollableController();
   }
@@ -901,7 +901,7 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
                     },
                     linkBuilder: (context, label, path, style) {
                       return Text(
-                        label,
+                        label.toString(),
                         style: style.copyWith(color: Colors.blue),
                       );
                     },
