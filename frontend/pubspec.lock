@@ -997,7 +997,7 @@ packages:
     description:
       path: "."
       ref: enhanced_with_ai
-      resolved-ref: cf373c32c00136ebb8c46c78b4fc351f70b96cc9
+      resolved-ref: "24b611aa3c321b74773c4872bfb351d6a78a65b4"
       url: "https://github.com/mi875/scribble.git"
     source: git
     version: "0.10.0+1"

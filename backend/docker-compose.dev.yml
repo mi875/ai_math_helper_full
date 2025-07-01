@@ -1,0 +1,46 @@
+version: '3.8'
+
+# Development overrides for docker-compose.yml
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  # Backend development configuration
+  backend:
+    build:
+      target: builder  # Use builder stage for development
+    container_name: ai_math_helper_backend_dev
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+    volumes:
+      # Mount source code for hot reload
+      - .:/app
+      - /app/node_modules  # Anonymous volume to preserve node_modules
+      - uploads_data:/app/uploads
+    command: ["pnpm", "run", "dev"]
+    ports:
+      - "3000:3000"
+      - "9229:9229"  # Debug port
+    stdin_open: true
+    tty: true
+
+  # Database Studio for development (optional)
+  db-studio:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    container_name: ai_math_helper_db_studio
+    environment:
+      - DATABASE_URL=postgresql://postgres:mathpassword@postgres:5432/ai_math_helper
+    ports:
+      - "4983:4983"  # Drizzle Studio port
+    networks:
+      - ai_math_helper
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["pnpm", "run", "db:studio"]
+    restart: "no"
+    profiles:
+      - tools  # Only start with --profile tools

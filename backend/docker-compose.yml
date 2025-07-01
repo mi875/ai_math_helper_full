@@ -1,0 +1,91 @@
+version: '3.8'
+
+networks:
+  ai_math_helper:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  uploads_data:
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: ai_math_helper_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ai_math_helper
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: mathpassword
+    ports:
+      - "5431:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - ai_math_helper
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ai_math_helper"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # AI Math Helper Backend API
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: ai_math_helper_backend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      # Database
+      - DATABASE_URL=postgresql://postgres:mathpassword@postgres:5432/ai_math_helper
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=ai_math_helper
+      - DB_USER=postgres
+      - DB_PASSWORD=mathpassword
+      
+      # Server
+      - PORT=3000
+      - NODE_ENV=production
+      
+      # Add your environment variables here
+      # - GOOGLE_AI_API_KEY=your_google_ai_key
+      # - FIREBASE_PROJECT_ID=your_firebase_project_id
+      # - OTHER_ENV_VARS=values
+    volumes:
+      - uploads_data:/app/uploads
+      # Mount Firebase credentials if needed
+      # - ./credential.json:/app/credential.json:ro
+    networks:
+      - ai_math_helper
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Database migration service (runs once)
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: ai_math_helper_migrate
+    environment:
+      - DATABASE_URL=postgresql://postgres:mathpassword@postgres:5432/ai_math_helper
+    networks:
+      - ai_math_helper
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["pnpm", "run", "db:migrate"]
+    restart: "no"

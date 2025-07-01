@@ -16,7 +16,12 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$ChatMessage {
 
- String get id; String get message; DateTime get timestamp; MessageSender get sender; String? get feedbackType;
+ String get id; String get message; DateTime get timestamp; MessageSender get sender; String? get feedbackType;// For AI messages, stores the original feedback type
+ String? get threadId;// Conversation thread ID for memory context
+ String? get resourceId;// Resource ID for memory scoping
+ ConversationState get state;// Message state for streaming
+ bool? get isFromMemory;// Whether this message was loaded from conversation history
+ int? get tokensConsumed;
 /// Create a copy of ChatMessage
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -29,16 +34,16 @@ $ChatMessageCopyWith<ChatMessage> get copyWith => _$ChatMessageCopyWithImpl<Chat
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ChatMessage&&(identical(other.id, id) || other.id == id)&&(identical(other.message, message) || other.message == message)&&(identical(other.timestamp, timestamp) || other.timestamp == timestamp)&&(identical(other.sender, sender) || other.sender == sender)&&(identical(other.feedbackType, feedbackType) || other.feedbackType == feedbackType));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ChatMessage&&(identical(other.id, id) || other.id == id)&&(identical(other.message, message) || other.message == message)&&(identical(other.timestamp, timestamp) || other.timestamp == timestamp)&&(identical(other.sender, sender) || other.sender == sender)&&(identical(other.feedbackType, feedbackType) || other.feedbackType == feedbackType)&&(identical(other.threadId, threadId) || other.threadId == threadId)&&(identical(other.resourceId, resourceId) || other.resourceId == resourceId)&&(identical(other.state, state) || other.state == state)&&(identical(other.isFromMemory, isFromMemory) || other.isFromMemory == isFromMemory)&&(identical(other.tokensConsumed, tokensConsumed) || other.tokensConsumed == tokensConsumed));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,message,timestamp,sender,feedbackType);
+int get hashCode => Object.hash(runtimeType,id,message,timestamp,sender,feedbackType,threadId,resourceId,state,isFromMemory,tokensConsumed);
 
 @override
 String toString() {
-  return 'ChatMessage(id: $id, message: $message, timestamp: $timestamp, sender: $sender, feedbackType: $feedbackType)';
+  return 'ChatMessage(id: $id, message: $message, timestamp: $timestamp, sender: $sender, feedbackType: $feedbackType, threadId: $threadId, resourceId: $resourceId, state: $state, isFromMemory: $isFromMemory, tokensConsumed: $tokensConsumed)';
 }
 
 
@@ -49,7 +54,7 @@ abstract mixin class $ChatMessageCopyWith<$Res>  {
   factory $ChatMessageCopyWith(ChatMessage value, $Res Function(ChatMessage) _then) = _$ChatMessageCopyWithImpl;
 @useResult
 $Res call({
- String id, String message, DateTime timestamp, MessageSender sender, String? feedbackType
+ String id, String message, DateTime timestamp, MessageSender sender, String? feedbackType, String? threadId, String? resourceId, ConversationState state, bool? isFromMemory, int? tokensConsumed
 });
 
 
@@ -66,14 +71,19 @@ class _$ChatMessageCopyWithImpl<$Res>
 
 /// Create a copy of ChatMessage
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? message = null,Object? timestamp = null,Object? sender = null,Object? feedbackType = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? message = null,Object? timestamp = null,Object? sender = null,Object? feedbackType = freezed,Object? threadId = freezed,Object? resourceId = freezed,Object? state = null,Object? isFromMemory = freezed,Object? tokensConsumed = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,message: null == message ? _self.message : message // ignore: cast_nullable_to_non_nullable
 as String,timestamp: null == timestamp ? _self.timestamp : timestamp // ignore: cast_nullable_to_non_nullable
 as DateTime,sender: null == sender ? _self.sender : sender // ignore: cast_nullable_to_non_nullable
 as MessageSender,feedbackType: freezed == feedbackType ? _self.feedbackType : feedbackType // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,threadId: freezed == threadId ? _self.threadId : threadId // ignore: cast_nullable_to_non_nullable
+as String?,resourceId: freezed == resourceId ? _self.resourceId : resourceId // ignore: cast_nullable_to_non_nullable
+as String?,state: null == state ? _self.state : state // ignore: cast_nullable_to_non_nullable
+as ConversationState,isFromMemory: freezed == isFromMemory ? _self.isFromMemory : isFromMemory // ignore: cast_nullable_to_non_nullable
+as bool?,tokensConsumed: freezed == tokensConsumed ? _self.tokensConsumed : tokensConsumed // ignore: cast_nullable_to_non_nullable
+as int?,
   ));
 }
 
@@ -84,7 +94,7 @@ as String?,
 @JsonSerializable()
 
 class _ChatMessage implements ChatMessage {
-  const _ChatMessage({required this.id, required this.message, required this.timestamp, this.sender = MessageSender.user, this.feedbackType});
+  const _ChatMessage({required this.id, required this.message, required this.timestamp, this.sender = MessageSender.user, this.feedbackType, this.threadId, this.resourceId, this.state = ConversationState.normal, this.isFromMemory, this.tokensConsumed});
   factory _ChatMessage.fromJson(Map<String, dynamic> json) => _$ChatMessageFromJson(json);
 
 @override final  String id;
@@ -92,6 +102,16 @@ class _ChatMessage implements ChatMessage {
 @override final  DateTime timestamp;
 @override@JsonKey() final  MessageSender sender;
 @override final  String? feedbackType;
+// For AI messages, stores the original feedback type
+@override final  String? threadId;
+// Conversation thread ID for memory context
+@override final  String? resourceId;
+// Resource ID for memory scoping
+@override@JsonKey() final  ConversationState state;
+// Message state for streaming
+@override final  bool? isFromMemory;
+// Whether this message was loaded from conversation history
+@override final  int? tokensConsumed;
 
 /// Create a copy of ChatMessage
 /// with the given fields replaced by the non-null parameter values.
@@ -106,16 +126,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ChatMessage&&(identical(other.id, id) || other.id == id)&&(identical(other.message, message) || other.message == message)&&(identical(other.timestamp, timestamp) || other.timestamp == timestamp)&&(identical(other.sender, sender) || other.sender == sender)&&(identical(other.feedbackType, feedbackType) || other.feedbackType == feedbackType));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ChatMessage&&(identical(other.id, id) || other.id == id)&&(identical(other.message, message) || other.message == message)&&(identical(other.timestamp, timestamp) || other.timestamp == timestamp)&&(identical(other.sender, sender) || other.sender == sender)&&(identical(other.feedbackType, feedbackType) || other.feedbackType == feedbackType)&&(identical(other.threadId, threadId) || other.threadId == threadId)&&(identical(other.resourceId, resourceId) || other.resourceId == resourceId)&&(identical(other.state, state) || other.state == state)&&(identical(other.isFromMemory, isFromMemory) || other.isFromMemory == isFromMemory)&&(identical(other.tokensConsumed, tokensConsumed) || other.tokensConsumed == tokensConsumed));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,message,timestamp,sender,feedbackType);
+int get hashCode => Object.hash(runtimeType,id,message,timestamp,sender,feedbackType,threadId,resourceId,state,isFromMemory,tokensConsumed);
 
 @override
 String toString() {
-  return 'ChatMessage(id: $id, message: $message, timestamp: $timestamp, sender: $sender, feedbackType: $feedbackType)';
+  return 'ChatMessage(id: $id, message: $message, timestamp: $timestamp, sender: $sender, feedbackType: $feedbackType, threadId: $threadId, resourceId: $resourceId, state: $state, isFromMemory: $isFromMemory, tokensConsumed: $tokensConsumed)';
 }
 
 
@@ -126,7 +146,7 @@ abstract mixin class _$ChatMessageCopyWith<$Res> implements $ChatMessageCopyWith
   factory _$ChatMessageCopyWith(_ChatMessage value, $Res Function(_ChatMessage) _then) = __$ChatMessageCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String message, DateTime timestamp, MessageSender sender, String? feedbackType
+ String id, String message, DateTime timestamp, MessageSender sender, String? feedbackType, String? threadId, String? resourceId, ConversationState state, bool? isFromMemory, int? tokensConsumed
 });
 
 
@@ -143,14 +163,19 @@ class __$ChatMessageCopyWithImpl<$Res>
 
 /// Create a copy of ChatMessage
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? message = null,Object? timestamp = null,Object? sender = null,Object? feedbackType = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? message = null,Object? timestamp = null,Object? sender = null,Object? feedbackType = freezed,Object? threadId = freezed,Object? resourceId = freezed,Object? state = null,Object? isFromMemory = freezed,Object? tokensConsumed = freezed,}) {
   return _then(_ChatMessage(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,message: null == message ? _self.message : message // ignore: cast_nullable_to_non_nullable
 as String,timestamp: null == timestamp ? _self.timestamp : timestamp // ignore: cast_nullable_to_non_nullable
 as DateTime,sender: null == sender ? _self.sender : sender // ignore: cast_nullable_to_non_nullable
 as MessageSender,feedbackType: freezed == feedbackType ? _self.feedbackType : feedbackType // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,threadId: freezed == threadId ? _self.threadId : threadId // ignore: cast_nullable_to_non_nullable
+as String?,resourceId: freezed == resourceId ? _self.resourceId : resourceId // ignore: cast_nullable_to_non_nullable
+as String?,state: null == state ? _self.state : state // ignore: cast_nullable_to_non_nullable
+as ConversationState,isFromMemory: freezed == isFromMemory ? _self.isFromMemory : isFromMemory // ignore: cast_nullable_to_non_nullable
+as bool?,tokensConsumed: freezed == tokensConsumed ? _self.tokensConsumed : tokensConsumed // ignore: cast_nullable_to_non_nullable
+as int?,
   ));
 }
 

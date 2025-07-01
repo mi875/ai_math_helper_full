@@ -12,7 +12,7 @@ abstract class MathProblem with _$MathProblem {
     required String id,
     required DateTime createdAt,
     required DateTime updatedAt,
-    ProblemImage? image,
+    @Default([]) List<ProblemImage> images, // Changed from single image to images array
     String? scribbleData,
     @Default([]) List<AiFeedback> aiFeedbacks,
     @Default(ProblemStatus.unsolved) ProblemStatus status,

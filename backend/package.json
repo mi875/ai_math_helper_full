@@ -4,7 +4,7 @@
   "scripts": {
     "dev": " env $(cat .env | xargs) tsx watch src/index.ts ",
     "build": "tsc",
-    "start": "node dist/index.js",
+    "start": "node dist/src/index.js",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",
     "db:studio": "drizzle-kit studio"
@@ -17,6 +17,7 @@
     "@mastra/libsql": "^0.11.0",
     "@mastra/loggers": "^0.10.2",
     "@mastra/memory": "^0.11.0",
+    "@mastra/pg": "^0.12.0",
     "@types/multer": "^1.4.13",
     "drizzle-orm": "^0.43.1",
     "firebase-admin": "^13.4.0",

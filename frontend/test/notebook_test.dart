@@ -47,7 +47,7 @@ void main() {
       );
 
       expect(problem.id, 'problem-id');
-      expect(problem.image, null);
+      expect(problem.images, []);
       expect(problem.scribbleData, null);
       expect(problem.status, ProblemStatus.unsolved);
       expect(problem.tags, []);
@@ -85,14 +85,14 @@ void main() {
         id: 'problem-id',
         createdAt: now,
         updatedAt: now,
-        image: testImages.first,
+        images: testImages,
         scribbleData: 'scribble-data',
         status: ProblemStatus.inProgress,
         tags: ['algebra', 'linear'],
       );
 
       expect(problem.id, 'problem-id');
-      expect(problem.image?.fileUrl, 'https://example.com/test1.jpg');
+      expect(problem.images.first.fileUrl, 'https://example.com/test1.jpg');
       expect(problem.scribbleData, 'scribble-data');
       expect(problem.status, ProblemStatus.inProgress);
       expect(problem.tags, ['algebra', 'linear']);

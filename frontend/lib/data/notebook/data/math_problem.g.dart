@@ -10,10 +10,11 @@ _MathProblem _$MathProblemFromJson(Map<String, dynamic> json) => _MathProblem(
   id: json['id'] as String,
   createdAt: DateTime.parse(json['createdAt'] as String),
   updatedAt: DateTime.parse(json['updatedAt'] as String),
-  image:
-      json['image'] == null
-          ? null
-          : ProblemImage.fromJson(json['image'] as Map<String, dynamic>),
+  images:
+      (json['images'] as List<dynamic>?)
+          ?.map((e) => ProblemImage.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const [],
   scribbleData: json['scribbleData'] as String?,
   aiFeedbacks:
       (json['aiFeedbacks'] as List<dynamic>?)
@@ -33,7 +34,7 @@ Map<String, dynamic> _$MathProblemToJson(_MathProblem instance) =>
       'id': instance.id,
       'createdAt': instance.createdAt.toIso8601String(),
       'updatedAt': instance.updatedAt.toIso8601String(),
-      'image': instance.image,
+      'images': instance.images,
       'scribbleData': instance.scribbleData,
       'aiFeedbacks': instance.aiFeedbacks,
       'status': _$ProblemStatusEnumMap[instance.status]!,

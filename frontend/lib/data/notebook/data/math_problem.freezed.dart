@@ -16,7 +16,8 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$MathProblem {
 
- String get id; DateTime get createdAt; DateTime get updatedAt; ProblemImage? get image; String? get scribbleData; List<AiFeedback> get aiFeedbacks; ProblemStatus get status; List<String> get tags;
+ String get id; DateTime get createdAt; DateTime get updatedAt; List<ProblemImage> get images;// Changed from single image to images array
+ String? get scribbleData; List<AiFeedback> get aiFeedbacks; ProblemStatus get status; List<String> get tags;
 /// Create a copy of MathProblem
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -29,16 +30,16 @@ $MathProblemCopyWith<MathProblem> get copyWith => _$MathProblemCopyWithImpl<Math
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is MathProblem&&(identical(other.id, id) || other.id == id)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&(identical(other.image, image) || other.image == image)&&(identical(other.scribbleData, scribbleData) || other.scribbleData == scribbleData)&&const DeepCollectionEquality().equals(other.aiFeedbacks, aiFeedbacks)&&(identical(other.status, status) || other.status == status)&&const DeepCollectionEquality().equals(other.tags, tags));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MathProblem&&(identical(other.id, id) || other.id == id)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&const DeepCollectionEquality().equals(other.images, images)&&(identical(other.scribbleData, scribbleData) || other.scribbleData == scribbleData)&&const DeepCollectionEquality().equals(other.aiFeedbacks, aiFeedbacks)&&(identical(other.status, status) || other.status == status)&&const DeepCollectionEquality().equals(other.tags, tags));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,createdAt,updatedAt,image,scribbleData,const DeepCollectionEquality().hash(aiFeedbacks),status,const DeepCollectionEquality().hash(tags));
+int get hashCode => Object.hash(runtimeType,id,createdAt,updatedAt,const DeepCollectionEquality().hash(images),scribbleData,const DeepCollectionEquality().hash(aiFeedbacks),status,const DeepCollectionEquality().hash(tags));
 
 @override
 String toString() {
-  return 'MathProblem(id: $id, createdAt: $createdAt, updatedAt: $updatedAt, image: $image, scribbleData: $scribbleData, aiFeedbacks: $aiFeedbacks, status: $status, tags: $tags)';
+  return 'MathProblem(id: $id, createdAt: $createdAt, updatedAt: $updatedAt, images: $images, scribbleData: $scribbleData, aiFeedbacks: $aiFeedbacks, status: $status, tags: $tags)';
 }
 
 
@@ -49,11 +50,11 @@ abstract mixin class $MathProblemCopyWith<$Res>  {
   factory $MathProblemCopyWith(MathProblem value, $Res Function(MathProblem) _then) = _$MathProblemCopyWithImpl;
 @useResult
 $Res call({
- String id, DateTime createdAt, DateTime updatedAt, ProblemImage? image, String? scribbleData, List<AiFeedback> aiFeedbacks, ProblemStatus status, List<String> tags
+ String id, DateTime createdAt, DateTime updatedAt, List<ProblemImage> images, String? scribbleData, List<AiFeedback> aiFeedbacks, ProblemStatus status, List<String> tags
 });
 
 
-$ProblemImageCopyWith<$Res>? get image;
+
 
 }
 /// @nodoc
@@ -66,32 +67,20 @@ class _$MathProblemCopyWithImpl<$Res>
 
 /// Create a copy of MathProblem
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? createdAt = null,Object? updatedAt = null,Object? image = freezed,Object? scribbleData = freezed,Object? aiFeedbacks = null,Object? status = null,Object? tags = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? createdAt = null,Object? updatedAt = null,Object? images = null,Object? scribbleData = freezed,Object? aiFeedbacks = null,Object? status = null,Object? tags = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime,updatedAt: null == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable
-as DateTime,image: freezed == image ? _self.image : image // ignore: cast_nullable_to_non_nullable
-as ProblemImage?,scribbleData: freezed == scribbleData ? _self.scribbleData : scribbleData // ignore: cast_nullable_to_non_nullable
+as DateTime,images: null == images ? _self.images : images // ignore: cast_nullable_to_non_nullable
+as List<ProblemImage>,scribbleData: freezed == scribbleData ? _self.scribbleData : scribbleData // ignore: cast_nullable_to_non_nullable
 as String?,aiFeedbacks: null == aiFeedbacks ? _self.aiFeedbacks : aiFeedbacks // ignore: cast_nullable_to_non_nullable
 as List<AiFeedback>,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as ProblemStatus,tags: null == tags ? _self.tags : tags // ignore: cast_nullable_to_non_nullable
 as List<String>,
   ));
 }
-/// Create a copy of MathProblem
-/// with the given fields replaced by the non-null parameter values.
-@override
-@pragma('vm:prefer-inline')
-$ProblemImageCopyWith<$Res>? get image {
-    if (_self.image == null) {
-    return null;
-  }
 
-  return $ProblemImageCopyWith<$Res>(_self.image!, (value) {
-    return _then(_self.copyWith(image: value));
-  });
-}
 }
 
 
@@ -99,13 +88,20 @@ $ProblemImageCopyWith<$Res>? get image {
 @JsonSerializable()
 
 class _MathProblem implements MathProblem {
-  const _MathProblem({required this.id, required this.createdAt, required this.updatedAt, this.image, this.scribbleData, final  List<AiFeedback> aiFeedbacks = const [], this.status = ProblemStatus.unsolved, final  List<String> tags = const []}): _aiFeedbacks = aiFeedbacks,_tags = tags;
+  const _MathProblem({required this.id, required this.createdAt, required this.updatedAt, final  List<ProblemImage> images = const [], this.scribbleData, final  List<AiFeedback> aiFeedbacks = const [], this.status = ProblemStatus.unsolved, final  List<String> tags = const []}): _images = images,_aiFeedbacks = aiFeedbacks,_tags = tags;
   factory _MathProblem.fromJson(Map<String, dynamic> json) => _$MathProblemFromJson(json);
 
 @override final  String id;
 @override final  DateTime createdAt;
 @override final  DateTime updatedAt;
-@override final  ProblemImage? image;
+ final  List<ProblemImage> _images;
+@override@JsonKey() List<ProblemImage> get images {
+  if (_images is EqualUnmodifiableListView) return _images;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_images);
+}
+
+// Changed from single image to images array
 @override final  String? scribbleData;
  final  List<AiFeedback> _aiFeedbacks;
 @override@JsonKey() List<AiFeedback> get aiFeedbacks {
@@ -136,16 +132,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _MathProblem&&(identical(other.id, id) || other.id == id)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&(identical(other.image, image) || other.image == image)&&(identical(other.scribbleData, scribbleData) || other.scribbleData == scribbleData)&&const DeepCollectionEquality().equals(other._aiFeedbacks, _aiFeedbacks)&&(identical(other.status, status) || other.status == status)&&const DeepCollectionEquality().equals(other._tags, _tags));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _MathProblem&&(identical(other.id, id) || other.id == id)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&const DeepCollectionEquality().equals(other._images, _images)&&(identical(other.scribbleData, scribbleData) || other.scribbleData == scribbleData)&&const DeepCollectionEquality().equals(other._aiFeedbacks, _aiFeedbacks)&&(identical(other.status, status) || other.status == status)&&const DeepCollectionEquality().equals(other._tags, _tags));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,createdAt,updatedAt,image,scribbleData,const DeepCollectionEquality().hash(_aiFeedbacks),status,const DeepCollectionEquality().hash(_tags));
+int get hashCode => Object.hash(runtimeType,id,createdAt,updatedAt,const DeepCollectionEquality().hash(_images),scribbleData,const DeepCollectionEquality().hash(_aiFeedbacks),status,const DeepCollectionEquality().hash(_tags));
 
 @override
 String toString() {
-  return 'MathProblem(id: $id, createdAt: $createdAt, updatedAt: $updatedAt, image: $image, scribbleData: $scribbleData, aiFeedbacks: $aiFeedbacks, status: $status, tags: $tags)';
+  return 'MathProblem(id: $id, createdAt: $createdAt, updatedAt: $updatedAt, images: $images, scribbleData: $scribbleData, aiFeedbacks: $aiFeedbacks, status: $status, tags: $tags)';
 }
 
 
@@ -156,11 +152,11 @@ abstract mixin class _$MathProblemCopyWith<$Res> implements $MathProblemCopyWith
   factory _$MathProblemCopyWith(_MathProblem value, $Res Function(_MathProblem) _then) = __$MathProblemCopyWithImpl;
 @override @useResult
 $Res call({
- String id, DateTime createdAt, DateTime updatedAt, ProblemImage? image, String? scribbleData, List<AiFeedback> aiFeedbacks, ProblemStatus status, List<String> tags
+ String id, DateTime createdAt, DateTime updatedAt, List<ProblemImage> images, String? scribbleData, List<AiFeedback> aiFeedbacks, ProblemStatus status, List<String> tags
 });
 
 
-@override $ProblemImageCopyWith<$Res>? get image;
+
 
 }
 /// @nodoc
@@ -173,13 +169,13 @@ class __$MathProblemCopyWithImpl<$Res>
 
 /// Create a copy of MathProblem
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? createdAt = null,Object? updatedAt = null,Object? image = freezed,Object? scribbleData = freezed,Object? aiFeedbacks = null,Object? status = null,Object? tags = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? createdAt = null,Object? updatedAt = null,Object? images = null,Object? scribbleData = freezed,Object? aiFeedbacks = null,Object? status = null,Object? tags = null,}) {
   return _then(_MathProblem(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime,updatedAt: null == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable
-as DateTime,image: freezed == image ? _self.image : image // ignore: cast_nullable_to_non_nullable
-as ProblemImage?,scribbleData: freezed == scribbleData ? _self.scribbleData : scribbleData // ignore: cast_nullable_to_non_nullable
+as DateTime,images: null == images ? _self._images : images // ignore: cast_nullable_to_non_nullable
+as List<ProblemImage>,scribbleData: freezed == scribbleData ? _self.scribbleData : scribbleData // ignore: cast_nullable_to_non_nullable
 as String?,aiFeedbacks: null == aiFeedbacks ? _self._aiFeedbacks : aiFeedbacks // ignore: cast_nullable_to_non_nullable
 as List<AiFeedback>,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as ProblemStatus,tags: null == tags ? _self._tags : tags // ignore: cast_nullable_to_non_nullable
@@ -187,19 +183,7 @@ as List<String>,
   ));
 }
 
-/// Create a copy of MathProblem
-/// with the given fields replaced by the non-null parameter values.
-@override
-@pragma('vm:prefer-inline')
-$ProblemImageCopyWith<$Res>? get image {
-    if (_self.image == null) {
-    return null;
-  }
 
-  return $ProblemImageCopyWith<$Res>(_self.image!, (value) {
-    return _then(_self.copyWith(image: value));
-  });
-}
 }
 
 // dart format on

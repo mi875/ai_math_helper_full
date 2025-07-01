@@ -93,7 +93,7 @@ class NotebookModel extends _$NotebookModel {
       id: data['uid'] ?? data['id'].toString(),
       createdAt: DateTime.tryParse(data['createdAt'] ?? '') ?? DateTime.now(),
       updatedAt: DateTime.tryParse(data['updatedAt'] ?? '') ?? DateTime.now(),
-      image: images.isNotEmpty ? images.first : null,
+      images: images,
       scribbleData: data['scribbleData'],
       status: _parseStatusFromString(data['status'] ?? 'unsolved'),
       tags: List<String>.from(data['tags'] ?? []),

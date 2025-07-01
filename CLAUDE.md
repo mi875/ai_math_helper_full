@@ -28,6 +28,14 @@ AI Math Helper is a full-stack application consisting of a Flutter mobile fronte
 ### Database Setup
 The backend uses PostgreSQL with Drizzle ORM. Database runs on localhost:5431 with compose.yaml in backend/db/
 
+### Docker Setup
+Full Docker Compose setup available for backend:
+- `cd backend && ./setup.sh` - Interactive setup script
+- `make help` - Show all Docker commands
+- `docker-compose up -d` - Start production environment
+- `docker-compose -f docker-compose.yml -f docker-compose.dev.yml up` - Development with hot reload
+- See `backend/DOCKER.md` for complete documentation
+
 ## Architecture
 
 ### Full-Stack Structure

@@ -233,7 +233,7 @@ class _NotebookDetailViewState extends ConsumerState<NotebookDetailView> {
                   _buildStatusChip(context, problem.status),
                 ],
               ),
-              if (problem.image != null) ...[
+              if (problem.images.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 Container(
                   height: 120,
@@ -246,7 +246,7 @@ class _NotebookDetailViewState extends ConsumerState<NotebookDetailView> {
                   ),
                   clipBehavior: Clip.antiAlias,
                   child: AuthenticatedImage(
-                    imageUrl: problem.image!.fileUrl,
+                    imageUrl: problem.images.first.fileUrl,
                     fit: BoxFit.cover,
                     placeholder: const Icon(Icons.image, size: 40),
                     errorWidget: const Icon(Icons.broken_image, size: 40),

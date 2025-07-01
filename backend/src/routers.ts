@@ -64,6 +64,10 @@ apiRouter.post('/problems/:problemUid/feedback/stream',
   notebookController.streamAiFeedback
 );
 
+// Chat endpoints for conversation history
+apiRouter.get('/problems/:problemUid/chat/history', notebookController.getChatHistory);
+apiRouter.post('/problems/:problemUid/chat/send', notebookController.sendChatMessage);
+
 // Problem image upload endpoint
 apiRouter.post('/problems/images/upload', 
   problemImageUploadMiddleware(), 

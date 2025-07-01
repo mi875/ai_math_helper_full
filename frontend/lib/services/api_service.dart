@@ -9,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:mime/mime.dart';
 import 'package:ai_math_helper/data/notebook/data/ai_feedback.dart';
 import 'package:ai_math_helper/data/notebook/data/problem_status.dart';
+import 'package:ai_math_helper/data/notebook/data/chat_message.dart';
 
 class ApiService {
   static const String baseUrl =
@@ -810,5 +811,103 @@ class ApiService {
       default:
         return FeedbackType.suggestion;
     }
+  }
+
+  // Chat History Methods
+
+  /// Get conversation history for a problem
+  static Future<Map<String, dynamic>?> getChatHistory(String problemUid) async {
+    try {
+      final token = await _getAuthToken();
+      if (token == null) return null;
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/problems/$problemUid/chat/history'),
+        headers: _getHeaders(token: token),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(utf8.decode(response.bodyBytes));
+        return data['data'];
+      } else {
+        debugPrint('Failed to get chat history: ${response.statusCode}');
+        debugPrint('Response: ${response.body}');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('Error getting chat history: $e');
+      return null;
+    }
+  }
+
+  /// Send a text-only chat message (without canvas)
+  static Future<Map<String, dynamic>?> sendTextMessage(
+    String problemUid,
+    String message, {
+    bool includeImages = false,
+  }) async {
+    try {
+      final token = await _getAuthToken();
+      if (token == null) return null;
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/problems/$problemUid/chat/send'),
+        headers: _getHeaders(token: token),
+        body: json.encode({'message': message, 'includeImages': includeImages}),
+      );
+
+      if (response.statusCode == 201) {
+        final data = json.decode(utf8.decode(response.bodyBytes));
+        return data['data'];
+      } else {
+        debugPrint('Failed to send text message: ${response.statusCode}');
+        debugPrint('Response: ${response.body}');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('Error sending text message: $e');
+      return null;
+    }
+  }
+
+  /// Convert backend chat history to ChatMessage list
+  static List<ChatMessage> parseChatHistory(Map<String, dynamic> historyData) {
+    final threadId = historyData['threadId'] as String?;
+    final messages = historyData['messages'] as List<dynamic>? ?? [];
+
+    return messages.map((msgData) {
+      final messageMap = msgData as Map<String, dynamic>;
+
+      return ChatMessage(
+        id: messageMap['id'] as String,
+        message: messageMap['message'] as String,
+        timestamp: DateTime.parse(messageMap['timestamp'] as String),
+        sender:
+            messageMap['sender'] == 'user'
+                ? MessageSender.user
+                : MessageSender.ai,
+        feedbackType: messageMap['feedbackType'] as String?,
+        threadId: threadId,
+        isFromMemory: true,
+        tokensConsumed: messageMap['tokensConsumed'] as int?,
+      );
+    }).toList();
+  }
+
+  /// Parse a message response into a ChatMessage
+  static ChatMessage parseMessageResponse(
+    Map<String, dynamic> responseData, {
+    String? threadId,
+    String? resourceId,
+  }) {
+    return ChatMessage.ai(
+      id: responseData['id'] as String,
+      message: responseData['message'] as String,
+      timestamp: DateTime.parse(responseData['timestamp'] as String),
+      feedbackType: responseData['type'] as String?,
+      threadId: threadId,
+      resourceId: resourceId,
+      tokensConsumed: responseData['tokensConsumed'] as int?,
+    );
   }
 }

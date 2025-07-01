@@ -1,6 +1,6 @@
 import type { Context } from 'hono';
 import { db } from '../db/client.js';
-import { notebooks, mathProblems, users, problemImages, aiFeedbacks } from '../db/schema.js';
+import { notebooks, mathProblems, users, problemImages, aiFeedbacks, chatThreads } from '../db/schema.js';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { processProblemImage, deleteProblemImages } from '../middleware/fileUploadMiddleware.js';
@@ -26,6 +26,43 @@ async function ensureUserExists(user: { uid: string; email?: string }) {
         grade: null,
       });
   }
+}
+
+// Helper function to get or create a chat thread for a problem
+async function getOrCreateChatThread(problemId: number, userId: string): Promise<{ threadId: string; resourceId: string }> {
+  // Check if a thread already exists for this problem
+  const existingThread = await db
+    .select()
+    .from(chatThreads)
+    .where(and(
+      eq(chatThreads.problemId, problemId),
+      eq(chatThreads.userId, userId)
+    ))
+    .limit(1);
+
+  if (existingThread.length > 0) {
+    return {
+      threadId: existingThread[0].threadId,
+      resourceId: existingThread[0].resourceId,
+    };
+  }
+
+  // Create a new thread
+  const threadId = randomUUID();
+  const resourceId = `${userId}_problem_${problemId}`; // Unique resource ID per user-problem combination
+
+  await db
+    .insert(chatThreads)
+    .values({
+      uid: randomUUID(),
+      problemId,
+      userId,
+      threadId,
+      resourceId,
+      title: `Math Problem Chat Session`,
+    });
+
+  return { threadId, resourceId };
 }
 
 export const notebookController = {
@@ -740,7 +777,10 @@ export const notebookController = {
       console.log('Reading original problem image from:', problemImage[0].filePath);
       const originalImageBuffer = fs.readFileSync(problemImage[0].filePath);
 
-      // Call mathHelper agent with both images
+      // Get or create chat thread for memory
+      const { threadId, resourceId } = await getOrCreateChatThread(problem[0].id, userId);
+      
+      // Call mathHelper agent with both images and memory
       const mathHelperAgent = mastra.getAgent('mathHelperAgent');
       
       // Create prompt based on custom message or default
@@ -769,7 +809,10 @@ export const notebookController = {
           ]
         },
      
-      ]);
+      ], {
+        threadId,
+        resourceId,
+      });
 
       // Parse feedback and determine type
       const feedbackText = result.text;
@@ -949,7 +992,10 @@ export const notebookController = {
             });
             controller.enqueue(encoder.encode(`data: ${startData}\n\n`));
 
-            // Call mathHelper agent with streaming
+            // Get or create chat thread for memory
+            const { threadId, resourceId } = await getOrCreateChatThread(problem[0].id, userId);
+            
+            // Call mathHelper agent with streaming and memory
             const mathHelperAgent = mastra.getAgent('mathHelperAgent');
             
             // Generate unique feedback ID
@@ -980,7 +1026,10 @@ export const notebookController = {
                   }
                 ]
               }
-            ]);
+            ], {
+              threadId,
+              resourceId,
+            });
 
             // Get the full response and simulate streaming by chunking
             fullFeedbackText = result.text;
@@ -1081,6 +1130,246 @@ export const notebookController = {
       return c.json({
         success: false,
         error: 'Failed to set up streaming'
+      }, 500);
+    }
+  },
+
+  // Get chat history for a problem
+  async getChatHistory(c: Context) {
+    try {
+      const user = c.get('user');
+      const userId = user.uid;
+      const problemUid = c.req.param('problemUid');
+
+      // Find the problem
+      const problem = await db
+        .select()
+        .from(mathProblems)
+        .where(and(
+          eq(mathProblems.uid, problemUid),
+          eq(mathProblems.userId, userId)
+        ))
+        .limit(1);
+
+      if (problem.length === 0) {
+        return c.json({
+          success: false,
+          error: 'Problem not found'
+        }, 404);
+      }
+
+      // Get or create chat thread
+      const { threadId, resourceId } = await getOrCreateChatThread(problem[0].id, userId);
+
+      // Get chat history from Mastra memory
+      const mathHelperAgent = mastra.getAgent('mathHelperAgent');
+      const memory = mathHelperAgent.getMemory();
+
+      if (!memory) {
+        return c.json({
+          success: true,
+          data: {
+            threadId,
+            resourceId,
+            messages: []
+          }
+        });
+      }
+
+      try {
+        // Query memory for conversation history
+        const { uiMessages } = await memory.query({
+          threadId,
+          resourceId,
+          selectBy: {
+            last: 50, // Get last 50 messages
+          },
+        });
+
+        // Convert messages to frontend format
+        const chatMessages = uiMessages.map(msg => ({
+          id: msg.id || `${msg.role}-${Date.now()}`,
+          message: msg.content,
+          timestamp: msg.createdAt || new Date(),
+          sender: msg.role === 'user' ? 'user' : 'ai',
+          feedbackType: msg.role === 'assistant' ? 'suggestion' : undefined,
+        }));
+
+        return c.json({
+          success: true,
+          data: {
+            threadId,
+            resourceId,
+            messages: chatMessages
+          }
+        });
+      } catch (memoryError) {
+        console.log('Memory query failed (probably no messages yet):', memoryError);
+        // Return empty messages if memory query fails (e.g., no conversation history yet)
+        return c.json({
+          success: true,
+          data: {
+            threadId,
+            resourceId,
+            messages: []
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching chat history:', error);
+      return c.json({
+        success: false,
+        error: 'Failed to fetch chat history'
+      }, 500);
+    }
+  },
+
+  // Send text-only chat message (without canvas)
+  async sendChatMessage(c: Context) {
+    try {
+      const user = c.get('user');
+      const userId = user.uid;
+      const problemUid = c.req.param('problemUid');
+      const { message, includeImages = false } = await c.req.json();
+
+      if (!message || typeof message !== 'string' || message.trim().length === 0) {
+        return c.json({
+          success: false,
+          error: 'Message is required'
+        }, 400);
+      }
+
+      // Find the problem
+      const problem = await db
+        .select()
+        .from(mathProblems)
+        .where(and(
+          eq(mathProblems.uid, problemUid),
+          eq(mathProblems.userId, userId)
+        ))
+        .limit(1);
+
+      if (problem.length === 0) {
+        return c.json({
+          success: false,
+          error: 'Problem not found'
+        }, 404);
+      }
+
+      // Get or create chat thread
+      const { threadId, resourceId } = await getOrCreateChatThread(problem[0].id, userId);
+
+      // Get mathHelper agent
+      const mathHelperAgent = mastra.getAgent('mathHelperAgent');
+      
+      // Check if this is the first interaction in the thread
+      const memory = mathHelperAgent.getMemory();
+      let isFirstInteraction = false;
+      
+      if (memory) {
+        try {
+          const { messages } = await memory.query({
+            threadId,
+            resourceId,
+            selectBy: { last: 1 }
+          });
+          isFirstInteraction = messages.length === 0;
+        } catch (error) {
+          // If memory query fails, assume first interaction
+          isFirstInteraction = true;
+        }
+      }
+
+      let messageContent: any[] = [
+        {
+          type: 'text',
+          text: message
+        }
+      ];
+
+      // Include problem image only on first interaction or when explicitly requested
+      if (isFirstInteraction || includeImages) {
+        try {
+          // Get the original problem image
+          const problemImage = await db
+            .select()
+            .from(problemImages)
+            .where(eq(problemImages.problemId, problem[0].id))
+            .limit(1);
+
+          if (problemImage.length > 0) {
+            const originalImageBuffer = fs.readFileSync(problemImage[0].filePath);
+            
+            messageContent.push({
+              type: 'image',
+              mimeType: problemImage[0].mimeType,
+              image: new URL(`data:${problemImage[0].mimeType};base64,${originalImageBuffer.toString('base64')}`)
+            });
+
+            // Add context to the message for first interaction
+            if (isFirstInteraction) {
+              messageContent[0].text = `This is the math problem I'm working on. ${message}`;
+            }
+          }
+        } catch (imageError) {
+          console.error('Error loading problem image:', imageError);
+          // Continue without image if there's an error
+        }
+      }
+
+      const result = await mathHelperAgent.generate([
+        {
+          role: 'user',
+          content: messageContent
+        }
+      ], {
+        threadId,
+        resourceId,
+      });
+
+      // Parse response and determine type
+      const responseText = result.text;
+      let feedbackType = 'suggestion';
+
+      if (responseText.includes('間違い') || responseText.includes('エラー') || responseText.includes('訂正')) {
+        feedbackType = 'correction';
+      } else if (responseText.includes('説明') || responseText.includes('なぜなら') || responseText.includes('理由')) {
+        feedbackType = 'explanation';
+      } else if (responseText.includes('頑張って') || responseText.includes('良い') || responseText.includes('素晴らしい')) {
+        feedbackType = 'encouragement';
+      }
+
+      // Calculate tokens consumed based on whether images were included
+      const baseTokens = Math.ceil(responseText.length / 4);
+      const imageTokens = (isFirstInteraction || includeImages) ? 200 : 0; // Rough estimate for image tokens
+      const tokensConsumed = Math.max(baseTokens + imageTokens, 10);
+
+      // Update user token usage
+      await db
+        .update(users)
+        .set({
+          usedTokens: sql`${users.usedTokens} + ${tokensConsumed}`,
+          remainingTokens: sql`${users.remainingTokens} - ${tokensConsumed}`,
+        })
+        .where(eq(users.uid, userId));
+
+      return c.json({
+        success: true,
+        data: {
+          id: randomUUID(),
+          message: responseText,
+          type: feedbackType,
+          timestamp: new Date(),
+          tokensConsumed,
+          includedImages: isFirstInteraction || includeImages
+        }
+      }, 201);
+
+    } catch (error) {
+      console.error('Error sending chat message:', error);
+      return c.json({
+        success: false,
+        error: 'Failed to send message'
       }, 500);
     }
   },

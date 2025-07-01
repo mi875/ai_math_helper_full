@@ -9,6 +9,7 @@ import 'package:ai_math_helper/services/authenticated_image_provider.dart';
 import 'package:ai_math_helper/services/api_service.dart';
 import 'package:ai_math_helper/data/notebook/data/ai_feedback.dart';
 import 'package:ai_math_helper/data/notebook/data/problem_status.dart';
+import 'package:ai_math_helper/data/notebook/data/chat_message.dart';
 import 'package:flutter/rendering.dart';
 import 'dart:ui' as ui;
 import 'dart:typed_data';
@@ -27,7 +28,6 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
   bool _isSheetWidthExpanded = false;
   final double _collapsedSheetWidthFraction = 0.3;
   final double _expandedSheetWidthFraction = 0.5;
-  late TransformationController _transformationController;
   late DraggableScrollableController _draggableController;
 
   // AI feedback state
@@ -35,18 +35,37 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
   bool _isGeneratingFeedback = false;
   final GlobalKey _scribbleKey = GlobalKey();
 
-  // Chat message state
+  // Drawing state
+  bool _isErasing = false;
+
+  // Chat message state with conversation memory
   final TextEditingController _messageController = TextEditingController();
   bool _isSendingMessage = false;
-  List<Map<String, dynamic>> _chatMessages =
-      []; // Store both user and AI messages
+  List<ChatMessage> _chatMessages =
+      []; // Store both user and AI messages with memory context
+  String? _threadId; // Current conversation thread ID
+  String? _resourceId; // Current resource ID for memory scoping
+  bool _isLoadingHistory = false;
 
   @override
   void initState() {
     super.initState();
-    notifier = ScribbleNotifier(fixedStrokeWidth: 2);
-    _transformationController = TransformationController();
+    // Fixed canvas size for consistent AI processing and cost reduction
+    const fixedCanvasSize = Size(1500, 1024);
+
+    notifier = ScribbleNotifier(
+      fixedStrokeWidth: 2,
+      canvasSize: fixedCanvasSize,
+      allowedPointersMode: ScribblePointerMode.mouseAndPen,
+    );
+    // Set the color to black immediately
+    notifier.setColor(Colors.black);
     _draggableController = DraggableScrollableController();
+    // Load conversation history when the widget initializes
+    if (widget.problem?.id != null) {
+      _loadChatHistory();
+      _loadProblemImageAsBackground();
+    }
   }
 
   @override
@@ -55,9 +74,21 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
     _setThemeAwarePenColor();
   }
 
+  @override
+  void didUpdateWidget(MathInputScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    // Reload background image if problem changed
+    if (oldWidget.problem?.id != widget.problem?.id &&
+        widget.problem?.id != null) {
+      _loadProblemImageAsBackground();
+      _loadChatHistory();
+    }
+  }
+
   void _setThemeAwarePenColor() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final penColor = isDark ? Colors.white : Colors.black;
+    // Always use black stroke color
+    const penColor = Colors.black;
 
     // Try to set pen color if the method exists
     try {
@@ -75,10 +106,27 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
     );
   }
 
+  void _toggleDrawingMode() {
+    setState(() {
+      _isErasing = !_isErasing;
+      if (_isErasing) {
+        notifier.setEraser();
+      } else {
+        notifier.setDrawing();
+        notifier.setColor(Colors.black);
+      }
+    });
+  }
+
+  void _resetView() {
+    // Reset the scribble view to center and default zoom
+    ScribbleInteractive.resetView(context);
+  }
+
   void _checkAnswer() {
     // TODO: Implement answer checking logic
     // This could integrate with the AI system to evaluate the drawn solution
-    print('Check Answer button pressed');
+    debugPrint('Check Answer button pressed');
 
     // Show a snackbar as feedback for now
     ScaffoldMessenger.of(context).showSnackBar(
@@ -87,6 +135,60 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
         duration: Duration(seconds: 2),
       ),
     );
+  }
+
+  // Load the problem image as background for the scribble canvas
+  Future<void> _loadProblemImageAsBackground() async {
+    if (widget.problem?.images.isEmpty ?? true) return;
+
+    try {
+      final firstImage = widget.problem!.images.first;
+      final imageProvider = AuthenticatedNetworkImage(firstImage.fileUrl);
+
+      // Set the problem image as background with appropriate sizing
+      // The image will be fitted to maintain aspect ratio within the canvas
+      notifier.setBackgroundImageWithSizeAndOffset(
+        imageProvider,
+        Size(512, 256), // Let it use natural size, fitted to canvas
+        Offset.zero, // Center the image
+      );
+    } catch (error) {
+      debugPrint('Error loading problem image as background: $error');
+    }
+  }
+
+  // Load conversation history for the current problem
+  Future<void> _loadChatHistory() async {
+    if (widget.problem?.id == null) return;
+
+    setState(() {
+      _isLoadingHistory = true;
+    });
+
+    try {
+      final historyData = await ApiService.getChatHistory(widget.problem!.id);
+
+      if (historyData != null) {
+        final historyMessages = ApiService.parseChatHistory(historyData);
+
+        setState(() {
+          _chatMessages =
+              historyMessages.reversed.toList(); // Reverse to show newest first
+          _threadId = historyData['threadId'] as String?;
+          _resourceId = historyData['resourceId'] as String?;
+        });
+
+        debugPrint(
+          'Loaded ${historyMessages.length} messages from chat history',
+        );
+      }
+    } catch (error) {
+      debugPrint('Error loading chat history: $error');
+    } finally {
+      setState(() {
+        _isLoadingHistory = false;
+      });
+    }
   }
 
   // Generate AI feedback from canvas drawing
@@ -111,21 +213,23 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
     }
   }
 
-  // Send chat message to AI
+  // Send chat message to AI with conversation memory
   Future<void> _sendChatMessage(String message) async {
     if (message.trim().isEmpty || widget.problem?.id == null) {
       return;
     }
 
+    // Create user message with thread context
+    final userMessage = ChatMessage.user(
+      message: message,
+      threadId: _threadId,
+      resourceId: _resourceId,
+    );
+
     // Add user message to chat
     setState(() {
       _isSendingMessage = true;
-      _chatMessages.insert(0, {
-        'id': 'user-${DateTime.now().millisecondsSinceEpoch}',
-        'message': message,
-        'timestamp': DateTime.now(),
-        'sender': 'user',
-      });
+      _chatMessages.insert(0, userMessage);
     });
 
     try {
@@ -140,16 +244,17 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
         type: FeedbackType.suggestion,
       );
 
+      // Create temporary streaming AI message
+      final streamingMessage = ChatMessage.aiStreaming(
+        message: '',
+        threadId: _threadId,
+        resourceId: _resourceId,
+      );
+
       // Add temporary AI message to chat
       setState(() {
         _aiFeedbacks.insert(0, tempFeedback);
-        _chatMessages.insert(0, {
-          'id': 'ai-streaming-temp',
-          'message': '',
-          'timestamp': DateTime.now(),
-          'sender': 'ai',
-          'isStreaming': true,
-        });
+        _chatMessages.insert(0, streamingMessage);
       });
 
       // Start streaming AI response to the chat message
@@ -169,10 +274,9 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
                 _aiFeedbacks[0] = _aiFeedbacks[0].copyWith(
                   message: _currentStreamingText,
                 );
-                _chatMessages[0] = {
-                  ..._chatMessages[0],
-                  'message': _currentStreamingText,
-                };
+                _chatMessages[0] = _chatMessages[0].copyWith(
+                  message: _currentStreamingText,
+                );
               });
               break;
 
@@ -182,10 +286,9 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
                 _aiFeedbacks[0] = _aiFeedbacks[0].copyWith(
                   message: _currentStreamingText,
                 );
-                _chatMessages[0] = {
-                  ..._chatMessages[0],
-                  'message': _currentStreamingText,
-                };
+                _chatMessages[0] = _chatMessages[0].copyWith(
+                  message: _currentStreamingText,
+                );
               });
               break;
 
@@ -197,16 +300,22 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
                 type: _parseFeedbackType(chunk['feedbackType']),
               );
 
+              final completedMessage = ChatMessage.ai(
+                id: chunk['id'],
+                message: chunk['message'],
+                timestamp: DateTime.parse(chunk['timestamp']),
+                feedbackType: chunk['feedbackType'],
+                threadId: _threadId,
+                resourceId: _resourceId,
+                tokensConsumed: chunk['tokensConsumed'] as int?,
+              );
+
               setState(() {
                 _aiFeedbacks[0] = completedFeedback;
-                _chatMessages[0] = {
-                  'id': chunk['id'],
-                  'message': chunk['message'],
-                  'timestamp': DateTime.parse(chunk['timestamp']),
-                  'sender': 'ai',
-                  'feedbackType': chunk['feedbackType'],
-                  'isStreaming': false,
-                };
+                _chatMessages[0] = completedMessage;
+                // Update thread info if returned from backend
+                _threadId ??= chunk['threadId'] as String?;
+                _resourceId ??= chunk['resourceId'] as String?;
               });
               break;
 
@@ -228,10 +337,9 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
             _aiFeedbacks[0] = _aiFeedbacks[0].copyWith(
               message: _currentStreamingText,
             );
-            _chatMessages[0] = {
-              ..._chatMessages[0],
-              'message': _currentStreamingText,
-            };
+            _chatMessages[0] = _chatMessages[0].copyWith(
+              message: _currentStreamingText,
+            );
           });
 
           final feedback = await ApiService.generateAiFeedback(
@@ -241,16 +349,18 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
           );
 
           if (feedback != null) {
+            final fallbackMessage = ChatMessage.ai(
+              id: feedback.id,
+              message: feedback.message,
+              timestamp: feedback.timestamp,
+              feedbackType: feedback.type.toString().split('.').last,
+              threadId: _threadId,
+              resourceId: _resourceId,
+            );
+
             setState(() {
               _aiFeedbacks[0] = feedback;
-              _chatMessages[0] = {
-                'id': feedback.id,
-                'message': feedback.message,
-                'timestamp': feedback.timestamp,
-                'sender': 'ai',
-                'feedbackType': feedback.type.toString().split('.').last,
-                'isStreaming': false,
-              };
+              _chatMessages[0] = fallbackMessage;
             });
           } else {
             throw Exception('Fallback API also failed');
@@ -263,7 +373,7 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
             });
           }
           if (_chatMessages.isNotEmpty &&
-              _chatMessages[0]['id'] == 'ai-streaming-temp') {
+              _chatMessages[0].state == ConversationState.streaming) {
             setState(() {
               _chatMessages.removeAt(0);
             });
@@ -278,7 +388,7 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
         });
       }
       if (_chatMessages.isNotEmpty &&
-          _chatMessages[0]['id'] == 'ai-streaming-temp') {
+          _chatMessages[0].state == ConversationState.streaming) {
         setState(() {
           _chatMessages.removeAt(0);
         });
@@ -295,7 +405,60 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
     }
   }
 
-  // Capture the scribble canvas as an image
+  // Send text-only message without canvas for pure conversation
+  Future<void> _sendTextOnlyMessage(String message) async {
+    if (message.trim().isEmpty || widget.problem?.id == null) {
+      return;
+    }
+
+    // Create user message with thread context
+    final userMessage = ChatMessage.user(
+      message: message,
+      threadId: _threadId,
+      resourceId: _resourceId,
+    );
+
+    // Add user message to chat
+    setState(() {
+      _isSendingMessage = true;
+      _chatMessages.insert(0, userMessage);
+    });
+
+    try {
+      // Send text-only message to API
+      final responseData = await ApiService.sendTextMessage(
+        widget.problem!.id,
+        message,
+      );
+
+      if (responseData != null) {
+        final aiMessage = ApiService.parseMessageResponse(
+          responseData,
+          threadId: _threadId,
+          resourceId: _resourceId,
+        );
+
+        setState(() {
+          _chatMessages.insert(0, aiMessage);
+          // Update thread info if not already set
+          _threadId ??= aiMessage.threadId;
+          _resourceId ??= aiMessage.resourceId;
+        });
+      } else {
+        throw Exception('Failed to get response from AI');
+      }
+    } catch (error) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error sending message: $error')));
+    } finally {
+      setState(() {
+        _isSendingMessage = false;
+      });
+    }
+  }
+
+  // Capture the scribble canvas as an image (includes background image and drawings)
   Future<Uint8List?> _captureCanvasAsImage() async {
     try {
       // Get the render object of the scribble widget
@@ -303,15 +466,15 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
           _scribbleKey.currentContext?.findRenderObject()
               as RenderRepaintBoundary;
 
-      // Convert to image
-      final ui.Image image = await boundary.toImage(pixelRatio: 2.0);
+      // Convert to image with fixed canvas size for consistent AI processing
+      final ui.Image image = await boundary.toImage(pixelRatio: 1.0);
       final ByteData? byteData = await image.toByteData(
         format: ui.ImageByteFormat.png,
       );
 
       return byteData?.buffer.asUint8List();
     } catch (error) {
-      print('Error capturing canvas: $error');
+      debugPrint('Error capturing canvas: $error');
       return null;
     }
   }
@@ -319,7 +482,6 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
   @override
   void dispose() {
     notifier.dispose();
-    _transformationController.dispose();
     _messageController.dispose();
     _draggableController.dispose();
     super.dispose();
@@ -336,8 +498,14 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Math Input'), // Reverted to a simple Text widget
+        title: const Text('Math Input'),
         actions: [
+          IconButton(
+            icon: Icon(_isErasing ? Icons.edit : Icons.auto_fix_high),
+            onPressed: _toggleDrawingMode,
+            tooltip: _isErasing ? 'Switch to pen' : 'Switch to eraser',
+            color: _isErasing ? Colors.red : null,
+          ),
           IconButton(
             icon: const Icon(Icons.undo),
             onPressed: () => notifier.undo(),
@@ -348,8 +516,7 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.zoom_out_map),
-            onPressed:
-                () => _transformationController.value = Matrix4.identity(),
+            onPressed: _resetView,
             tooltip: 'Reset zoom and pan',
           ),
           IconButton(
@@ -391,37 +558,23 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
       body: Stack(
         // Use Stack to overlay the draggable sheet
         children: [
-          InteractiveViewer(
-            transformationController: _transformationController,
-            minScale: 0.5,
-            maxScale: 4.0,
-            child: Container(
-              color: Theme.of(context).colorScheme.surface,
-              child: Stack(
-                children: [
-                  if (widget.problem?.image != null)
-                    Positioned(
-                      top: 16,
-                      left: 16,
-                      child: Container(
-                        height: MediaQuery.of(context).size.height * 0.3,
-                        child: AuthenticatedImage(
-                          imageUrl: widget.problem!.image!.fileUrl,
-                          fit: BoxFit.contain,
-                          placeholder: const Center(
-                            child: Icon(Icons.image, size: 24),
-                          ),
-                          errorWidget: const Center(
-                            child: Icon(Icons.broken_image, size: 24),
-                          ),
-                        ),
-                      ),
-                    ),
-                  RepaintBoundary(
-                    key: _scribbleKey,
-                    child: Scribble(notifier: notifier, drawPen: true),
+          Container(
+            color: Theme.of(context).colorScheme.surface,
+            child: RepaintBoundary(
+              key: _scribbleKey,
+              child: Container(
+                width: double.infinity,
+                height: double.infinity,
+                color: Colors.white,
+                child: SizedBox.expand(
+                  child: ScribbleInteractive(
+                    notifier: notifier,
+                    drawPen: true,
+                    fixedStrokeWidth: 1.0,
+
+                    backgroundImageFit: BoxFit.contain,
                   ),
-                ],
+                ),
               ),
             ),
           ),
@@ -663,7 +816,8 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
                                               _messageController.text.trim();
                                           if (message.isNotEmpty) {
                                             _messageController.clear();
-                                            await _sendChatMessage(message);
+                                            // Use text-only message for regular chat input
+                                            await _sendTextOnlyMessage(message);
                                           }
                                         },
                               ),
@@ -674,7 +828,10 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
                                     : (message) async {
                                       if (message.trim().isNotEmpty) {
                                         _messageController.clear();
-                                        await _sendChatMessage(message.trim());
+                                        // Use text-only message for regular chat input
+                                        await _sendTextOnlyMessage(
+                                          message.trim(),
+                                        );
                                       }
                                     },
                           ),
@@ -711,11 +868,11 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
   // It can be removed if not needed elsewhere.
 
   // Build chat bubble for both user and AI messages
-  Widget _buildChatBubble(Map<String, dynamic> message) {
-    final isUser = message['sender'] == 'user';
-    final isStreaming = message['isStreaming'] == true;
-    final messageText = message['message'] as String;
-    final timestamp = message['timestamp'] as DateTime;
+  Widget _buildChatBubble(ChatMessage message) {
+    final isUser = message.sender == MessageSender.user;
+    final isStreaming = message.state == ConversationState.streaming;
+    final messageText = message.message;
+    final timestamp = message.timestamp;
 
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
@@ -993,7 +1150,8 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
                         _isSendingMessage || widget.problem?.id == null
                             ? null
                             : () async {
-                              await _sendChatMessage(question);
+                              // Use text-only message for common questions
+                              await _sendTextOnlyMessage(question);
                             },
                     backgroundColor:
                         Theme.of(context).colorScheme.surfaceContainer,

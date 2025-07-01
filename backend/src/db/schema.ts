@@ -112,3 +112,16 @@ export const aiFeedbacks = pgTable('ai_feedbacks', {
   createdAt: timestamp('created_at').defaultNow(),
 });
 
+// Chat threads table for conversation memory
+export const chatThreads = pgTable('chat_threads', {
+  id: serial('id').primaryKey(),
+  uid: varchar('uid', { length: 128 }).notNull(), // UUID for frontend
+  problemId: integer('problem_id').notNull(),
+  userId: varchar('user_id', { length: 128 }).notNull(), // Firebase UID reference
+  threadId: varchar('thread_id', { length: 128 }).notNull(), // Mastra memory thread ID
+  resourceId: varchar('resource_id', { length: 256 }).notNull(), // Mastra memory resource ID (user_id + problem_id)
+  title: varchar('title', { length: 255 }), // Optional thread title
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
