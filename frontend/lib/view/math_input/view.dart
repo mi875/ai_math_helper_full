@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -145,16 +146,53 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
       final firstImage = widget.problem!.images.first;
       final imageProvider = AuthenticatedNetworkImage(firstImage.fileUrl);
 
-      // Set the problem image as background with appropriate sizing
+      // Get the natural image dimensions
+      Size naturalSize;
+      if (firstImage.width != null && firstImage.height != null) {
+        // Use dimensions from the database if available
+        naturalSize = Size(firstImage.width!.toDouble(), firstImage.height!.toDouble());
+      } else {
+        // Fallback: Load the image to get its natural dimensions
+        naturalSize = await _getImageNaturalSize(imageProvider);
+      }
+
+      // Scale down the image to make it smaller (50% of natural size)
+      const double scaleFactor = 0.5;
+      final Size scaledSize = Size(
+        naturalSize.width * scaleFactor,
+        naturalSize.height * scaleFactor,
+      );
+
+      // Set the problem image as background with the scaled size
       // The image will be fitted to maintain aspect ratio within the canvas
       notifier.setBackgroundImageWithSizeAndOffset(
         imageProvider,
-        Size(512, 256), // Let it use natural size, fitted to canvas
+        scaledSize,
         Offset.zero, // Center the image
       );
     } catch (error) {
       debugPrint('Error loading problem image as background: $error');
     }
+  }
+
+  // Helper method to get the natural size of an image
+  Future<Size> _getImageNaturalSize(ImageProvider imageProvider) async {
+    final ImageStream stream = imageProvider.resolve(ImageConfiguration.empty);
+    final Completer<Size> completer = Completer<Size>();
+    
+    late ImageStreamListener listener;
+    listener = ImageStreamListener((ImageInfo info, bool synchronousCall) {
+      final image = info.image;
+      completer.complete(Size(image.width.toDouble(), image.height.toDouble()));
+      stream.removeListener(listener);
+    }, onError: (exception, stackTrace) {
+      // Fallback to a reasonable default size
+      completer.complete(const Size(512, 256));
+      stream.removeListener(listener);
+    });
+    
+    stream.addListener(listener);
+    return completer.future;
   }
 
   // Load conversation history for the current problem
