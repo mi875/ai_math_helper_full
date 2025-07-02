@@ -6,7 +6,7 @@
     "build": "tsc",
     "start": "node dist/src/index.js",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx src/db/migrate.ts",
+    "db:migrate": "node dist/src/db/migrate.js",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
