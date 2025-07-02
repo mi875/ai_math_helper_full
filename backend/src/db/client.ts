@@ -4,7 +4,7 @@ import * as schema from './schema.js';
 
 // Create a PostgreSQL connection pool
 const pool = new Pool({
-  connectionString: 'postgresql://postgres:mathpassword@localhost:5431/ai_math_helper',
+  connectionString: process.env.DATABASE_URL || 'postgresql://postgres:mathpassword@localhost:5431/ai_math_helper',
 });
 
 // Create a Drizzle ORM client

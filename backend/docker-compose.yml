@@ -36,6 +36,8 @@ services:
       context: .
       dockerfile: Dockerfile
       target: production
+      platforms:
+        - linux/amd64
     container_name: ai_math_helper_backend
     restart: unless-stopped
     ports:
@@ -60,7 +62,7 @@ services:
     volumes:
       - uploads_data:/app/uploads
       # Mount Firebase credentials if needed
-      # - ./credential.json:/app/credential.json:ro
+      - ./credential.json:/app/credential.json:ro
     networks:
       - ai_math_helper
     depends_on:
@@ -79,6 +81,8 @@ services:
       context: .
       dockerfile: Dockerfile
       target: production
+      platforms:
+        - linux/amd64
     container_name: ai_math_helper_migrate
     environment:
       - DATABASE_URL=postgresql://postgres:mathpassword@postgres:5432/ai_math_helper

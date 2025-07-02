@@ -56,10 +56,11 @@ class _CreateNotebookDialogState extends State<CreateNotebookDialog> {
         key: _formKey,
         child: SizedBox(
           width: MediaQuery.of(context).size.width * 0.8,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
               TextFormField(
                 controller: _titleController,
                 decoration: const InputDecoration(
@@ -132,6 +133,7 @@ class _CreateNotebookDialogState extends State<CreateNotebookDialog> {
                 }).toList(),
               ),
             ],
+            ),
           ),
         ),
       ),

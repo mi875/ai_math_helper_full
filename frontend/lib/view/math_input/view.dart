@@ -652,9 +652,21 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Tappable top area (Drag Handle + Title)
+                        // Draggable top area (Drag Handle + Title)
                         GestureDetector(
                           onTap: _expandSheet,
+                          onPanUpdate: (details) {
+                            // Calculate the new position based on pan delta
+                            final RenderBox renderBox = context.findRenderObject() as RenderBox;
+                            final screenHeight = MediaQuery.of(context).size.height;
+                            final currentPosition = _draggableController.size;
+                            
+                            // Convert pan delta to sheet position change (negative because dragging up decreases position)
+                            final deltaY = -details.delta.dy / screenHeight;
+                            final newPosition = (currentPosition + deltaY).clamp(0.4, 0.9);
+                            
+                            _draggableController.jumpTo(newPosition);
+                          },
                           behavior: HitTestBehavior.opaque,
                           child: Column(
                             mainAxisSize: MainAxisSize.min,

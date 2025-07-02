@@ -87,6 +87,7 @@ class _NotebooksViewState extends ConsumerState<NotebooksView> {
         padding: const EdgeInsets.all(32.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               Icons.book_outlined,
