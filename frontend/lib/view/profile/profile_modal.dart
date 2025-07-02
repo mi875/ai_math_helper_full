@@ -47,7 +47,24 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final user = authState.user;
     final profile = profileState.profile;
 
-    // Update grade selection when profile data changes
+    // Update controllers when profile data changes
+    if (profile != null) {
+      // Update display name controller if it's empty and profile has data
+      if (_displayNameController.text.isEmpty && profile.displayName != null) {
+        _displayNameController.text = profile.displayName!;
+      }
+      
+      // Update grade selection if not already set
+      if (_selectedGradeKey == null && profile.grade != null) {
+        _selectedGradeKey = profile.grade;
+        final selectedGrade = profileState.gradeOptions
+            .where((g) => g.key == profile.grade)
+            .firstOrNull;
+        if (selectedGrade != null) {
+          _gradeController.text = selectedGrade.displayName;
+        }
+      }
+    }
 
     return Scaffold(
       body: Column(

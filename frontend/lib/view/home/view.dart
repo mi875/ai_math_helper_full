@@ -15,9 +15,26 @@ class MyHomePage extends ConsumerStatefulWidget {
   ConsumerState<MyHomePage> createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends ConsumerState<MyHomePage> {
+class _MyHomePageState extends ConsumerState<MyHomePage>
+    with TickerProviderStateMixin {
   int _selectedIndex = 0;
   bool _isExtended = false;
+  late AnimationController _railAnimationController;
+
+  @override
+  void initState() {
+    super.initState();
+    _railAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+  }
+
+  @override
+  void dispose() {
+    _railAnimationController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -120,18 +137,22 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
   }
 
   Widget _buildNavigationRail() {
-    return NavigationRail(
-      extended: _isExtended,
-      labelType:
-          _isExtended
-              ? NavigationRailLabelType.none
-              : NavigationRailLabelType.selected,
-      useIndicator: true,
-      minExtendedWidth: 280,
-      minWidth: 80,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      elevation: 1,
-      destinations: const [
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOutCubicEmphasized,
+      width: _isExtended ? 280 : 80,
+      child: NavigationRail(
+        extended: _isExtended,
+        labelType:
+            _isExtended
+                ? NavigationRailLabelType.none
+                : NavigationRailLabelType.selected,
+        useIndicator: true,
+        minExtendedWidth: 280,
+        minWidth: 80,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        elevation: 1,
+        destinations: const [
         NavigationRailDestination(
           icon: Icon(Icons.home_outlined),
           selectedIcon: Icon(Icons.home),
@@ -167,6 +188,7 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
       },
       leading: _buildNavigationRailHeader(),
       // trailing: _isExtended ? _buildNavigationRailTrailing() : null,
+      ),
     );
   }
 
@@ -189,35 +211,57 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
               color: Theme.of(context).colorScheme.onPrimaryContainer,
             ),
           ),
-          if (_isExtended) ...[
-            const SizedBox(height: 12),
-            Text(
-              'AI Math Helper',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOutCubicEmphasized,
+            height: _isExtended ? null : 0,
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOutCubicEmphasized,
+              opacity: _isExtended ? 1.0 : 0.0,
+              child: _isExtended
+                  ? Column(
+                      children: [
+                        const SizedBox(height: 12),
+                        Text(
+                          'AI Math Helper',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Learn & Practice',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    )
+                  : const SizedBox.shrink(),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Learn & Practice',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
+          ),
           const SizedBox(height: 16),
           // Menu toggle button
           Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+                color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
               ),
             ),
             child: IconButton(
               icon: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
+                duration: const Duration(milliseconds: 300),
+                switchInCurve: Curves.easeInOutCubicEmphasized,
+                switchOutCurve: Curves.easeInOutCubicEmphasized,
+                transitionBuilder: (Widget child, Animation<double> animation) {
+                  return ScaleTransition(
+                    scale: animation,
+                    child: child,
+                  );
+                },
                 child: Icon(
                   _isExtended ? Icons.menu_open : Icons.menu,
                   key: ValueKey(_isExtended),
@@ -228,116 +272,14 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
                 setState(() {
                   _isExtended = !_isExtended;
                 });
+                if (_isExtended) {
+                  _railAnimationController.forward();
+                } else {
+                  _railAnimationController.reverse();
+                }
               },
             ),
           ),
-          const SizedBox(height: 16),
-          // Add new problem FAB
-          SizedBox(
-            width: _isExtended ? 200 : 56,
-            child:
-                _isExtended
-                    ? FilledButton.icon(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => MathInputScreen(),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.add),
-                      label: const Text('New Problem'),
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                    )
-                    : FloatingActionButton(
-                      heroTag: 'rail_fab',
-                      mini: true,
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => MathInputScreen(),
-                          ),
-                        );
-                      },
-                      child: const Icon(Icons.add),
-                    ),
-          ),
-          // Additional options when expanded
-          if (_isExtended) ...[
-            const SizedBox(height: 24),
-            const Divider(),
-            const SizedBox(height: 8),
-            // Settings option
-            Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () {
-                  // Settings action
-                },
-                borderRadius: BorderRadius.circular(8),
-                child: Container(
-                  width: 200,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16.0,
-                    vertical: 12.0,
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.settings_outlined,
-                        size: 20,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Settings',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            // Help option
-            Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () {
-                  // Help action
-                },
-                borderRadius: BorderRadius.circular(8),
-                child: Container(
-                  width: 200,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16.0,
-                    vertical: 12.0,
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.help_outline,
-                        size: 20,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Help',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
         ],
       ),
     );
