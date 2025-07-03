@@ -27,6 +27,7 @@ export const users = pgTable('users', {
   email: varchar('email', { length: 255 }).notNull(),
   displayName: varchar('display_name', { length: 100 }),
   grade: varchar('grade', { length: 20 }), // Japanese education system grade
+  isProfileComplete: boolean('is_profile_complete').default(false), // Track if initial setup is complete
   // Profile image
   profileImageUrl: varchar('profile_image_url', { length: 500 }), // URL to uploaded image
   profileImageOriginalName: varchar('profile_image_original_name', { length: 255 }), // Original file name

@@ -1,6 +1,7 @@
 import 'package:ai_math_helper/data/notebook/model/notebook_model.dart';
 import 'package:ai_math_helper/view/notebook/notebook_detail_view.dart';
 import 'package:ai_math_helper/view/notebook/create_notebook_dialog.dart';
+import 'package:ai_math_helper/l10n/localization_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -27,7 +28,7 @@ class _NotebooksViewState extends ConsumerState<NotebooksView> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Notebooks'),
+        title: Text(L10n.get('myNotebooks')),
         actions: [
           IconButton(
             icon: const Icon(Icons.search),
@@ -51,7 +52,7 @@ class _NotebooksViewState extends ConsumerState<NotebooksView> {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'Error loading notebooks',
+                        L10n.get('errorLoadingNotebooks'),
                         style: Theme.of(context).textTheme.headlineSmall,
                       ),
                       const SizedBox(height: 8),
@@ -65,7 +66,7 @@ class _NotebooksViewState extends ConsumerState<NotebooksView> {
                         onPressed: () {
                           ref.read(notebookModelProvider.notifier).loadNotebooks();
                         },
-                        child: const Text('Retry'),
+                        child: Text(L10n.get('retry')),
                       ),
                     ],
                   ),
@@ -76,7 +77,7 @@ class _NotebooksViewState extends ConsumerState<NotebooksView> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showCreateNotebookDialog(context, ref),
         icon: const Icon(Icons.add),
-        label: const Text('New Notebook'),
+        label: Text(L10n.get('newNotebook')),
       ),
     );
   }
@@ -96,14 +97,14 @@ class _NotebooksViewState extends ConsumerState<NotebooksView> {
             ),
             const SizedBox(height: 24),
             Text(
-              'No Notebooks Yet',
+              L10n.get('noNotebooksYet'),
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: 16),
             Text(
-              'Create your first notebook to start organizing your math problems',
+              L10n.get('createFirstNotebook'),
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
@@ -113,7 +114,7 @@ class _NotebooksViewState extends ConsumerState<NotebooksView> {
             FilledButton.icon(
               onPressed: () => _showCreateNotebookDialog(context, ref),
               icon: const Icon(Icons.add),
-              label: const Text('Create First Notebook'),
+              label: Text(L10n.get('createFirstNotebookButton')),
             ),
           ],
         ),
@@ -192,23 +193,23 @@ class _NotebooksViewState extends ConsumerState<NotebooksView> {
                         ),
                         PopupMenuButton(
                           itemBuilder: (context) => [
-                            const PopupMenuItem(
+                            PopupMenuItem(
                               value: 'edit',
                               child: Row(
                                 children: [
                                   Icon(Icons.edit),
                                   SizedBox(width: 8),
-                                  Text('Edit'),
+                                  Text(L10n.get('edit')),
                                 ],
                               ),
                             ),
-                            const PopupMenuItem(
+                            PopupMenuItem(
                               value: 'delete',
                               child: Row(
                                 children: [
                                   Icon(Icons.delete),
                                   SizedBox(width: 8),
-                                  Text('Delete'),
+                                  Text(L10n.get('delete')),
                                 ],
                               ),
                             ),
@@ -244,7 +245,7 @@ class _NotebooksViewState extends ConsumerState<NotebooksView> {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          '$problemCount problem${problemCount == 1 ? '' : 's'}',
+                          '$problemCount ${problemCount == 1 ? L10n.get('problem') : L10n.get('problems')}',
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
@@ -292,11 +293,11 @@ class _NotebooksViewState extends ConsumerState<NotebooksView> {
     final difference = now.difference(date);
 
     if (difference.inDays == 0) {
-      return 'Today';
+      return L10n.get('today');
     } else if (difference.inDays == 1) {
-      return 'Yesterday';
+      return L10n.get('yesterday');
     } else if (difference.inDays < 7) {
-      return '${difference.inDays} days ago';
+      return '${difference.inDays} ${L10n.get('daysAgo')}';
     } else {
       return '${date.day}/${date.month}/${date.year}';
     }
@@ -338,21 +339,21 @@ class _NotebooksViewState extends ConsumerState<NotebooksView> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Notebook'),
+        title: Text(L10n.get('deleteNotebook')),
         content: Text(
-          'Are you sure you want to delete "${notebook.title}"? This action cannot be undone.',
+          L10n.get('deleteNotebookConfirmation'),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: Text(L10n.get('cancel')),
           ),
           FilledButton(
             onPressed: () {
               ref.read(notebookModelProvider.notifier).deleteNotebook(notebook.id);
               Navigator.of(context).pop();
             },
-            child: const Text('Delete'),
+            child: Text(L10n.get('delete')),
           ),
         ],
       ),

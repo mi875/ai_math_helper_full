@@ -1,0 +1,535 @@
+{
+  "@@locale": "en",
+  "appName": "AI Math Helper",
+  "@appName": {
+    "description": "The name of the application"
+  },
+  "personalMathAssistant": "Your personal math learning assistant",
+  "@personalMathAssistant": {
+    "description": "Login page subtitle"
+  },
+  "signInWithGoogle": "Sign in with Google",
+  "@signInWithGoogle": {
+    "description": "Google sign-in button text"
+  },
+  "home": "Home",
+  "@home": {
+    "description": "Home navigation label"
+  },
+  "notebooks": "Notebooks",
+  "@notebooks": {
+    "description": "Notebooks navigation label"
+  },
+  "practice": "Practice",
+  "@practice": {
+    "description": "Practice navigation label"
+  },
+  "analytics": "Analytics",
+  "@analytics": {
+    "description": "Analytics navigation label"
+  },
+  "profile": "Profile",
+  "@profile": {
+    "description": "Profile navigation label"
+  },
+  "learnAndPractice": "Learn & Practice",
+  "@learnAndPractice": {
+    "description": "Home page subtitle"
+  },
+  "collapseMenu": "Collapse menu",
+  "@collapseMenu": {
+    "description": "Tooltip for menu collapse button"
+  },
+  "expandMenu": "Expand menu",
+  "@expandMenu": {
+    "description": "Tooltip for menu expand button"
+  },
+  "welcomeBack": "Welcome back!",
+  "@welcomeBack": {
+    "description": "Welcome message on home page"
+  },
+  "readyToSolve": "Ready to solve some math problems?",
+  "@readyToSolve": {
+    "description": "Subtitle on home page"
+  },
+  "problemsSolved": "Problems Solved",
+  "@problemsSolved": {
+    "description": "Problems solved counter label"
+  },
+  "startNewProblem": "Start New Problem",
+  "@startNewProblem": {
+    "description": "Button text to start new problem"
+  },
+  "jwtToken": "JWT Token",
+  "@jwtToken": {
+    "description": "JWT token section title"
+  },
+  "testJwtDescription": "This is a test JWT token for authentication purposes.",
+  "@testJwtDescription": {
+    "description": "JWT token description"
+  },
+  "learningContentSoon": "Learning content coming soon!",
+  "@learningContentSoon": {
+    "description": "Placeholder text for learning content"
+  },
+  "testJwtToken": "Test JWT Token",
+  "@testJwtToken": {
+    "description": "Test JWT token label"
+  },
+  "practiceDescription": "Practice problems to improve your skills",
+  "@practiceDescription": {
+    "description": "Practice section description"
+  },
+  "practiceExercisesSoon": "Practice exercises coming soon!",
+  "@practiceExercisesSoon": {
+    "description": "Placeholder text for practice exercises"
+  },
+  "trackProgress": "Track your progress and performance",
+  "@trackProgress": {
+    "description": "Analytics section description"
+  },
+  "analyticsDashboardSoon": "Analytics dashboard coming soon!",
+  "@analyticsDashboardSoon": {
+    "description": "Placeholder text for analytics dashboard"
+  },
+  "manageAccount": "Manage your account and preferences",
+  "@manageAccount": {
+    "description": "Profile section description"
+  },
+  "tapProfileIcon": "Tap the profile icon in the top bar to access your profile",
+  "@tapProfileIcon": {
+    "description": "Profile access instruction"
+  },
+  "openProfile": "Open Profile",
+  "@openProfile": {
+    "description": "Open profile button text"
+  },
+  "myNotebooks": "My Notebooks",
+  "@myNotebooks": {
+    "description": "My notebooks page title"
+  },
+  "errorLoadingNotebooks": "Error loading notebooks",
+  "@errorLoadingNotebooks": {
+    "description": "Error message when notebooks fail to load"
+  },
+  "retry": "Retry",
+  "@retry": {
+    "description": "Retry button text"
+  },
+  "newNotebook": "New Notebook",
+  "@newNotebook": {
+    "description": "New notebook button text"
+  },
+  "noNotebooksYet": "No Notebooks Yet",
+  "@noNotebooksYet": {
+    "description": "Empty state title for notebooks"
+  },
+  "createFirstNotebook": "Create your first notebook to start organizing your math problems",
+  "@createFirstNotebook": {
+    "description": "Empty state description for notebooks"
+  },
+  "createFirstNotebookButton": "Create First Notebook",
+  "@createFirstNotebookButton": {
+    "description": "Button text to create first notebook"
+  },
+  "edit": "Edit",
+  "@edit": {
+    "description": "Edit button text"
+  },
+  "delete": "Delete",
+  "@delete": {
+    "description": "Delete button text"
+  },
+  "problem": "problem",
+  "@problem": {
+    "description": "Single problem count label"
+  },
+  "problems": "problems",
+  "@problems": {
+    "description": "Multiple problems count label"
+  },
+  "today": "Today",
+  "@today": {
+    "description": "Today date label"
+  },
+  "yesterday": "Yesterday",
+  "@yesterday": {
+    "description": "Yesterday date label"
+  },
+  "daysAgo": "days ago",
+  "@daysAgo": {
+    "description": "Days ago date label"
+  },
+  "deleteNotebook": "Delete Notebook",
+  "@deleteNotebook": {
+    "description": "Delete notebook dialog title"
+  },
+  "deleteNotebookConfirmation": "Are you sure you want to delete this notebook? This action cannot be undone.",
+  "@deleteNotebookConfirmation": {
+    "description": "Delete notebook confirmation message"
+  },
+  "cancel": "Cancel",
+  "@cancel": {
+    "description": "Cancel button text"
+  },
+  "notebookNotFound": "Notebook Not Found",
+  "@notebookNotFound": {
+    "description": "Notebook not found error title"
+  },
+  "notebookNotFoundDescription": "The requested notebook could not be found.",
+  "@notebookNotFoundDescription": {
+    "description": "Notebook not found error description"
+  },
+  "editNotebook": "Edit Notebook",
+  "@editNotebook": {
+    "description": "Edit notebook button text"
+  },
+  "share": "Share",
+  "@share": {
+    "description": "Share button text"
+  },
+  "addProblem": "Add Problem",
+  "@addProblem": {
+    "description": "Add problem button text"
+  },
+  "noProblemsYet": "No Problems Yet",
+  "@noProblemsYet": {
+    "description": "Empty state title for problems"
+  },
+  "startAddingProblems": "Start adding math problems to organize your learning",
+  "@startAddingProblems": {
+    "description": "Empty state description for problems"
+  },
+  "scanProblem": "Scan Problem",
+  "@scanProblem": {
+    "description": "Scan problem button text"
+  },
+  "addManually": "Add Manually",
+  "@addManually": {
+    "description": "Add manually button text"
+  },
+  "problemNumber": "Problem #",
+  "@problemNumber": {
+    "description": "Problem number prefix"
+  },
+  "solved": "Solved",
+  "@solved": {
+    "description": "Solved problem status"
+  },
+  "inProgress": "In Progress",
+  "@inProgress": {
+    "description": "In progress problem status"
+  },
+  "needsHelp": "Needs Help",
+  "@needsHelp": {
+    "description": "Needs help problem status"
+  },
+  "unsolved": "Unsolved",
+  "@unsolved": {
+    "description": "Unsolved problem status"
+  },
+  "cameraPermissionRequired": "Camera permission is required to scan documents. Please grant permission in settings.",
+  "@cameraPermissionRequired": {
+    "description": "Camera permission required message"
+  },
+  "errorImportingFromCamera": "Error importing from camera:",
+  "@errorImportingFromCamera": {
+    "description": "Error importing from camera message"
+  },
+  "errorImportingFromGallery": "Error importing from gallery:",
+  "@errorImportingFromGallery": {
+    "description": "Error importing from gallery message"
+  },
+  "creatingProblemWithImages": "Creating problem with images...",
+  "@creatingProblemWithImages": {
+    "description": "Creating problem with images status"
+  },
+  "problemAddedSuccessfully": "Problem added successfully!",
+  "@problemAddedSuccessfully": {
+    "description": "Problem added success message"
+  },
+  "creatingProblem": "Creating problem...",
+  "@creatingProblem": {
+    "description": "Creating problem status"
+  },
+  "deleteProblem": "Delete Problem",
+  "@deleteProblem": {
+    "description": "Delete problem dialog title"
+  },
+  "deleteProblemConfirmation": "Are you sure you want to delete this problem? This action cannot be undone.",
+  "@deleteProblemConfirmation": {
+    "description": "Delete problem confirmation message"
+  },
+  "createNewNotebook": "Create New Notebook",
+  "@createNewNotebook": {
+    "description": "Create new notebook dialog title"
+  },
+  "notebookTitle": "Notebook Title",
+  "@notebookTitle": {
+    "description": "Notebook title input label"
+  },
+  "notebookTitlePlaceholder": "e.g., Algebra Basics",
+  "@notebookTitlePlaceholder": {
+    "description": "Notebook title input placeholder"
+  },
+  "enterTitle": "Please enter a title",
+  "@enterTitle": {
+    "description": "Enter title validation message"
+  },
+  "descriptionOptional": "Description (optional)",
+  "@descriptionOptional": {
+    "description": "Description input label"
+  },
+  "descriptionPlaceholder": "Brief description of this notebook",
+  "@descriptionPlaceholder": {
+    "description": "Description input placeholder"
+  },
+  "coverColor": "Cover Color",
+  "@coverColor": {
+    "description": "Cover color picker label"
+  },
+  "create": "Create",
+  "@create": {
+    "description": "Create button text"
+  },
+  "update": "Update",
+  "@update": {
+    "description": "Update button text"
+  },
+  "addNewProblem": "Add New Problem",
+  "@addNewProblem": {
+    "description": "Add new problem dialog title"
+  },
+  "editProblem": "Edit Problem",
+  "@editProblem": {
+    "description": "Edit problem dialog title"
+  },
+  "tags": "Tags",
+  "@tags": {
+    "description": "Tags input label"
+  },
+  "addTag": "Add a tag (e.g., algebra)",
+  "@addTag": {
+    "description": "Add tag input placeholder"
+  },
+  "commonTags": "Common tags: algebra, geometry, calculus, trigonometry",
+  "@commonTags": {
+    "description": "Common tags suggestion"
+  },
+  "images": "Images",
+  "@images": {
+    "description": "Images section label"
+  },
+  "camera": "Camera",
+  "@camera": {
+    "description": "Camera button text"
+  },
+  "gallery": "Gallery",
+  "@gallery": {
+    "description": "Gallery button text"
+  },
+  "scanner": "Scanner",
+  "@scanner": {
+    "description": "Scanner button text"
+  },
+  "add": "Add",
+  "@add": {
+    "description": "Add button text"
+  },
+  "mathInput": "Math Input",
+  "@mathInput": {
+    "description": "Math input screen title"
+  },
+  "switchToPen": "Switch to pen",
+  "@switchToPen": {
+    "description": "Switch to pen tooltip"
+  },
+  "switchToEraser": "Switch to eraser",
+  "@switchToEraser": {
+    "description": "Switch to eraser tooltip"
+  },
+  "resetZoomAndPan": "Reset zoom and pan",
+  "@resetZoomAndPan": {
+    "description": "Reset zoom and pan tooltip"
+  },
+  "saving": "Saving...",
+  "@saving": {
+    "description": "Saving status"
+  },
+  "saveDrawing": "Save drawing",
+  "@saveDrawing": {
+    "description": "Save drawing tooltip"
+  },
+  "allChangesSaved": "All changes saved",
+  "@allChangesSaved": {
+    "description": "All changes saved status"
+  },
+  "check": "Check",
+  "@check": {
+    "description": "Check button text"
+  },
+  "aiHelp": "AI Help",
+  "@aiHelp": {
+    "description": "AI help button text"
+  },
+  "aiFeedbackAndTips": "AI Feedback & Tips",
+  "@aiFeedbackAndTips": {
+    "description": "AI feedback section title"
+  },
+  "collapseWidth": "Collapse width",
+  "@collapseWidth": {
+    "description": "Collapse width tooltip"
+  },
+  "expandWidth": "Expand width",
+  "@expandWidth": {
+    "description": "Expand width tooltip"
+  },
+  "askQuestionOrTapAiHelp": "Ask a question or tap \"AI Help\" for feedback",
+  "@askQuestionOrTapAiHelp": {
+    "description": "AI help instruction"
+  },
+  "askQuestion": "Ask a question...",
+  "@askQuestion": {
+    "description": "Ask question input placeholder"
+  },
+  "typing": "Typing...",
+  "@typing": {
+    "description": "Typing indicator"
+  },
+  "howToSolveForX": "How do I solve for x?",
+  "@howToSolveForX": {
+    "description": "Sample question 1"
+  },
+  "whatIsPythagorean": "What is the Pythagorean theorem?",
+  "@whatIsPythagorean": {
+    "description": "Sample question 2"
+  },
+  "whatIsDerivative": "What's the derivative of x^n?",
+  "@whatIsDerivative": {
+    "description": "Sample question 3"
+  },
+  "whatIsIntegral": "What's the integral of 1/x?",
+  "@whatIsIntegral": {
+    "description": "Sample question 4"
+  },
+  "whatIsQuadratic": "What's the quadratic formula?",
+  "@whatIsQuadratic": {
+    "description": "Sample question 5"
+  },
+  "howToFindAreaCircle": "How do I find the area of a circle?",
+  "@howToFindAreaCircle": {
+    "description": "Sample question 6"
+  },
+  "howToFindCircumference": "How do I find circumference?",
+  "@howToFindCircumference": {
+    "description": "Sample question 7"
+  },
+  "clearDrawing": "Clear Drawing",
+  "@clearDrawing": {
+    "description": "Clear drawing dialog title"
+  },
+  "clearDrawingConfirmation": "Are you sure you want to clear the canvas? This action cannot be undone.",
+  "@clearDrawingConfirmation": {
+    "description": "Clear drawing confirmation message"
+  },
+  "clear": "Clear",
+  "@clear": {
+    "description": "Clear button text"
+  },
+  "answerCheckingSoon": "Answer checking functionality coming soon!",
+  "@answerCheckingSoon": {
+    "description": "Answer checking placeholder"
+  },
+  "save": "Save",
+  "@save": {
+    "description": "Save button text"
+  },
+  "displayName": "Display Name",
+  "@displayName": {
+    "description": "Display name input label"
+  },
+  "enterDisplayName": "Enter your display name",
+  "@enterDisplayName": {
+    "description": "Enter display name input placeholder"
+  },
+  "noDisplayNameSet": "No display name set",
+  "@noDisplayNameSet": {
+    "description": "No display name placeholder"
+  },
+  "gradeLevel": "Grade Level",
+  "@gradeLevel": {
+    "description": "Grade level input label"
+  },
+  "selectGradeLevel": "Select your grade level",
+  "@selectGradeLevel": {
+    "description": "Select grade level placeholder"
+  },
+  "noGradeSelected": "No grade selected",
+  "@noGradeSelected": {
+    "description": "No grade selected placeholder"
+  },
+  "email": "Email",
+  "@email": {
+    "description": "Email label"
+  },
+  "noEmail": "No email",
+  "@noEmail": {
+    "description": "No email placeholder"
+  },
+  "tokenBalance": "Token Balance",
+  "@tokenBalance": {
+    "description": "Token balance label"
+  },
+  "remaining": "Remaining:",
+  "@remaining": {
+    "description": "Remaining tokens label"
+  },
+  "signOut": "Sign Out",
+  "@signOut": {
+    "description": "Sign out button text"
+  },
+  "profileUpdatedSuccessfully": "Profile updated successfully!",
+  "@profileUpdatedSuccessfully": {
+    "description": "Profile updated success message"
+  },
+  "failedToUpdateProfile": "Failed to update profile",
+  "@failedToUpdateProfile": {
+    "description": "Failed to update profile error message"
+  },
+  "takePhoto": "Take Photo",
+  "@takePhoto": {
+    "description": "Take photo button text"
+  },
+  "chooseFromGallery": "Choose from Gallery",
+  "@chooseFromGallery": {
+    "description": "Choose from gallery button text"
+  },
+  "removePhoto": "Remove Photo",
+  "@removePhoto": {
+    "description": "Remove photo button text"
+  },
+  "profileImageUpdatedSuccessfully": "Profile image updated successfully!",
+  "@profileImageUpdatedSuccessfully": {
+    "description": "Profile image updated success message"
+  },
+  "failedToUpdateProfileImage": "Failed to update profile image",
+  "@failedToUpdateProfileImage": {
+    "description": "Failed to update profile image error message"
+  },
+  "error": "Error:",
+  "@error": {
+    "description": "Error prefix"
+  },
+  "profileImageRemovedSuccessfully": "Profile image removed successfully!",
+  "@profileImageRemovedSuccessfully": {
+    "description": "Profile image removed success message"
+  },
+  "failedToRemoveProfileImage": "Failed to remove profile image",
+  "@failedToRemoveProfileImage": {
+    "description": "Failed to remove profile image error message"
+  },
+  "signOutConfirmation": "Are you sure you want to sign out?",
+  "@signOutConfirmation": {
+    "description": "Sign out confirmation message"
+  }
+}

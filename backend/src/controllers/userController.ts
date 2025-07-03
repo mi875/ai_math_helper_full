@@ -125,6 +125,113 @@ export const updateUserProfile = async (c: Context) => {
   }
 };
 
+// Complete first-time user registration
+export const completeUserRegistration = async (c: Context) => {
+  try {
+    const user = c.get('user');
+    const { displayName, grade } = await c.req.json();
+    
+    // Validate required fields for registration
+    if (!displayName || !grade) {
+      return c.json({ 
+        success: false, 
+        error: 'Display name and grade are required for registration' 
+      }, 400);
+    }
+    
+    // Validate grade
+    if (!gradeEnum.includes(grade)) {
+      return c.json({ 
+        success: false, 
+        error: 'Invalid grade. Must be one of: ' + gradeEnum.join(', ') 
+      }, 400);
+    }
+    
+    // Validate display name length
+    if (displayName.length > 100) {
+      return c.json({ 
+        success: false, 
+        error: 'Display name must be 100 characters or less' 
+      }, 400);
+    }
+    
+    // Check if user already exists
+    const existingUser = await db.select()
+      .from(users)
+      .where(eq(users.uid, user.uid));
+    
+    let updatedUser;
+    
+    if (existingUser.length === 0) {
+      // Create new user profile with complete registration
+      updatedUser = await db.insert(users).values({
+        uid: user.uid,
+        email: user.email || '',
+        displayName,
+        grade,
+        isProfileComplete: true,
+      }).returning();
+    } else {
+      // Update existing user profile and mark as complete
+      updatedUser = await db.update(users)
+        .set({
+          displayName,
+          grade,
+          isProfileComplete: true,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.uid, user.uid))
+        .returning();
+    }
+    
+    const profile = updatedUser[0];
+    const gradeDisplayName = profile.grade ? gradeDisplayNames[profile.grade as keyof typeof gradeDisplayNames] : null;
+    
+    return c.json({ 
+      success: true, 
+      message: 'User registration completed successfully',
+      profile: {
+        ...profile,
+        gradeDisplayName
+      }
+    });
+  } catch (error) {
+    console.error('Error completing user registration:', error);
+    return c.json({ success: false, error: 'Failed to complete user registration' }, 500);
+  }
+};
+
+// Check if user needs to complete registration
+export const checkRegistrationStatus = async (c: Context) => {
+  try {
+    const user = c.get('user');
+    
+    const userProfile = await db.select()
+      .from(users)
+      .where(eq(users.uid, user.uid));
+    
+    if (!userProfile.length) {
+      return c.json({ 
+        success: true, 
+        needsRegistration: true,
+        message: 'User profile not found' 
+      });
+    }
+    
+    const profile = userProfile[0];
+    const needsRegistration = !profile.isProfileComplete || !profile.displayName || !profile.grade;
+    
+    return c.json({ 
+      success: true, 
+      needsRegistration,
+      profile: needsRegistration ? null : profile
+    });
+  } catch (error) {
+    console.error('Error checking registration status:', error);
+    return c.json({ success: false, error: 'Failed to check registration status' }, 500);
+  }
+};
+
 // Get available grades
 export const getAvailableGrades = async (c: Context) => {
   try {

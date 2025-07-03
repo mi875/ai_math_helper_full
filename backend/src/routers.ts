@@ -5,7 +5,9 @@ import {
   updateUserProfile,
   getAvailableGrades,
   uploadProfileImage,
-  deleteProfileImage
+  deleteProfileImage,
+  completeUserRegistration,
+  checkRegistrationStatus
 } from './controllers/userController.js';
 import { tokenController } from './controllers/tokenController.js';
 import { notebookController } from './controllers/notebookController.js';
@@ -25,6 +27,8 @@ const apiRouter = new Hono()
 apiRouter.get('/user/profile', getUserProfile);
 apiRouter.put('/user/profile', updateUserProfile);
 apiRouter.get('/user/grades', getAvailableGrades);
+apiRouter.post('/user/register', completeUserRegistration);
+apiRouter.get('/user/registration-status', checkRegistrationStatus);
 
 // Profile image endpoints
 apiRouter.post('/user/profile/image', 

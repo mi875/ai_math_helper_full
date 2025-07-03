@@ -78,6 +78,20 @@
       "when": 1751273974916,
       "tag": "0010_calm_anita_blake",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1751571951637,
+      "tag": "0011_sloppy_loa",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1751572637340,
+      "tag": "0012_noisy_onslaught",
+      "breakpoints": true
     }
   ]
 }

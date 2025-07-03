@@ -18,6 +18,7 @@ _UserProfile _$UserProfileFromJson(Map<String, dynamic> json) => _UserProfile(
   totalTokens: (json['totalTokens'] as num).toInt(),
   usedTokens: (json['usedTokens'] as num).toInt(),
   remainingTokens: (json['remainingTokens'] as num).toInt(),
+  isProfileComplete: json['isProfileComplete'] as bool?,
 );
 
 Map<String, dynamic> _$UserProfileToJson(_UserProfile instance) =>
@@ -33,6 +34,7 @@ Map<String, dynamic> _$UserProfileToJson(_UserProfile instance) =>
       'totalTokens': instance.totalTokens,
       'usedTokens': instance.usedTokens,
       'remainingTokens': instance.remainingTokens,
+      'isProfileComplete': instance.isProfileComplete,
     };
 
 _GradeOption _$GradeOptionFromJson(Map<String, dynamic> json) => _GradeOption(

@@ -6,7 +6,7 @@ part of 'notebook_model.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$notebookModelHash() => r'6e90c0cb6b71f747fa8429624f02e3d7ea5458c7';
+String _$notebookModelHash() => r'4c9304c6c5fa10f99b69fa05b78dc301c7cf0ac1';
 
 /// See also [NotebookModel].
 @ProviderFor(NotebookModel)

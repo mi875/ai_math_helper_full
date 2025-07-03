@@ -152,6 +152,75 @@ class ProfileModel extends _$ProfileModel {
     }
   }
 
+  Future<bool> checkRegistrationStatus() async {
+    state = state.copyWith(isLoading: true, errorMessage: null);
+
+    try {
+      final response = await ApiService.checkRegistrationStatus();
+      if (response != null) {
+        final needsRegistration = response['needsRegistration'] ?? false;
+        state = state.copyWith(isLoading: false);
+        return needsRegistration;
+      } else {
+        state = state.copyWith(
+          isLoading: false,
+          errorMessage: 'Failed to check registration status',
+        );
+        return true; // Assume needs registration if we can't check
+      }
+    } catch (e) {
+      debugPrint('Error checking registration status: $e');
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'Error checking registration status: $e',
+      );
+      return true; // Assume needs registration if error occurs
+    }
+  }
+
+  Future<bool> completeRegistration({
+    required String displayName,
+    required String grade,
+  }) async {
+    state = state.copyWith(isUpdating: true, errorMessage: null);
+
+    try {
+      final response = await ApiService.completeUserRegistration(
+        displayName: displayName,
+        grade: grade,
+      );
+
+      if (response != null && response['success'] == true) {
+        // Update profile with the returned data
+        if (response['profile'] != null) {
+          final profile = UserProfile.fromJson(response['profile']);
+          state = state.copyWith(
+            profile: profile,
+            isUpdating: false,
+          );
+        }
+        return true;
+      } else {
+        String errorMessage = 'Failed to complete registration';
+        if (response != null && response['error'] != null) {
+          errorMessage = response['error'];
+        }
+        state = state.copyWith(
+          isUpdating: false,
+          errorMessage: errorMessage,
+        );
+        return false;
+      }
+    } catch (e) {
+      debugPrint('Error completing registration: $e');
+      state = state.copyWith(
+        isUpdating: false,
+        errorMessage: 'Error completing registration: $e',
+      );
+      return false;
+    }
+  }
+
   Future<bool> uploadProfileImage(XFile imageFile) async {
     state = state.copyWith(isUpdating: true, errorMessage: null);
 

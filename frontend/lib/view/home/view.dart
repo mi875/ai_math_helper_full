@@ -3,6 +3,7 @@ import 'package:ai_math_helper/data/user/model/auth_model.dart';
 import 'package:ai_math_helper/view/math_input/view.dart';
 import 'package:ai_math_helper/view/profile/profile_modal.dart';
 import 'package:ai_math_helper/view/notebook/notebooks_view.dart';
+import 'package:ai_math_helper/l10n/localization_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -95,31 +96,31 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
                   });
                 },
                 selectedIndex: _selectedIndex,
-                destinations: const [
+                destinations: [
                   NavigationDestination(
                     icon: Icon(Icons.home_outlined),
                     selectedIcon: Icon(Icons.home),
-                    label: 'Home',
+                    label: L10n.get('home'),
                   ),
                   NavigationDestination(
                     icon: Icon(Icons.book_outlined),
                     selectedIcon: Icon(Icons.book),
-                    label: 'Notebooks',
+                    label: L10n.get('notebooks'),
                   ),
                   NavigationDestination(
                     icon: Icon(Icons.assignment_outlined),
                     selectedIcon: Icon(Icons.assignment),
-                    label: 'Practice',
+                    label: L10n.get('practice'),
                   ),
                   NavigationDestination(
                     icon: Icon(Icons.bar_chart_outlined),
                     selectedIcon: Icon(Icons.bar_chart),
-                    label: 'Analytics',
+                    label: L10n.get('analytics'),
                   ),
                   NavigationDestination(
                     icon: Icon(Icons.person_outline),
                     selectedIcon: Icon(Icons.person),
-                    label: 'Profile',
+                    label: L10n.get('profile'),
                   ),
                 ],
               ),
@@ -152,31 +153,31 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
         minWidth: 80,
         backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 1,
-        destinations: const [
+        destinations: [
         NavigationRailDestination(
           icon: Icon(Icons.home_outlined),
           selectedIcon: Icon(Icons.home),
-          label: Text('Home'),
+          label: Text(L10n.get('home')),
         ),
         NavigationRailDestination(
           icon: Icon(Icons.book_outlined),
           selectedIcon: Icon(Icons.book),
-          label: Text('Notebooks'),
+          label: Text(L10n.get('notebooks')),
         ),
         NavigationRailDestination(
           icon: Icon(Icons.assignment_outlined),
           selectedIcon: Icon(Icons.assignment),
-          label: Text('Practice'),
+          label: Text(L10n.get('practice')),
         ),
         NavigationRailDestination(
           icon: Icon(Icons.bar_chart_outlined),
           selectedIcon: Icon(Icons.bar_chart),
-          label: Text('Analytics'),
+          label: Text(L10n.get('analytics')),
         ),
         NavigationRailDestination(
           icon: Icon(Icons.person_outline),
           selectedIcon: Icon(Icons.person),
-          label: Text('Profile'),
+          label: Text(L10n.get('profile')),
         ),
         NavigationRailDestination(icon: Icon(Icons.key), label: Text("JWT")),
       ],
@@ -224,7 +225,7 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
                       children: [
                         const SizedBox(height: 12),
                         Text(
-                          'AI Math Helper',
+                          L10n.get('appName'),
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w600,
                             color: Theme.of(context).colorScheme.onSurface,
@@ -232,7 +233,7 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Learn & Practice',
+                          L10n.get('learnAndPractice'),
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
@@ -267,7 +268,7 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
                   key: ValueKey(_isExtended),
                 ),
               ),
-              tooltip: _isExtended ? 'Collapse menu' : 'Expand menu',
+              tooltip: _isExtended ? L10n.get('collapseMenu') : L10n.get('expandMenu'),
               onPressed: () {
                 setState(() {
                   _isExtended = !_isExtended;
@@ -295,7 +296,7 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
               color: Theme.of(context).colorScheme.primary,
             ),
             child: Text(
-              'AI Math Helper',
+              L10n.get('appName'),
               style: TextStyle(
                 color: Theme.of(context).colorScheme.onPrimary,
                 fontSize: 24,
@@ -310,7 +311,7 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
                       ? Theme.of(context).colorScheme.primary
                       : null,
             ),
-            title: const Text('Home'),
+            title: Text(L10n.get('home')),
             selected: _selectedIndex == 0,
             onTap: () {
               setState(() {
@@ -327,7 +328,7 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
                       ? Theme.of(context).colorScheme.primary
                       : null,
             ),
-            title: const Text('Notebooks'),
+            title: Text(L10n.get('notebooks')),
             selected: _selectedIndex == 1,
             onTap: () {
               setState(() {
@@ -346,7 +347,7 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
                       ? Theme.of(context).colorScheme.primary
                       : null,
             ),
-            title: const Text('Practice'),
+            title: Text(L10n.get('practice')),
             selected: _selectedIndex == 2,
             onTap: () {
               setState(() {
@@ -363,7 +364,7 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
                       ? Theme.of(context).colorScheme.primary
                       : null,
             ),
-            title: const Text('Analytics'),
+            title: Text(L10n.get('analytics')),
             selected: _selectedIndex == 3,
             onTap: () {
               setState(() {
@@ -380,7 +381,7 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
                       ? Theme.of(context).colorScheme.primary
                       : null,
             ),
-            title: const Text('Profile'),
+            title: Text(L10n.get('profile')),
             selected: _selectedIndex == 4,
             onTap: () {
               setState(() {
@@ -434,7 +435,7 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Welcome back!',
+            L10n.get('welcomeBack'),
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.w600,
               color: Theme.of(context).colorScheme.onSurface,
@@ -442,7 +443,7 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
           ),
           const SizedBox(height: 8),
           Text(
-            'Ready to solve some math problems?',
+            L10n.get('readyToSolve'),
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
@@ -470,7 +471,7 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            'Problems Solved',
+                            L10n.get('problemsSolved'),
                             style: Theme.of(
                               context,
                             ).textTheme.titleMedium?.copyWith(
@@ -508,7 +509,7 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
                       );
                     },
                     icon: const Icon(Icons.add),
-                    label: const Text('Start New Problem'),
+                    label: Text(L10n.get('startNewProblem')),
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 24,
@@ -532,7 +533,7 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'JWT Token',
+            L10n.get('jwtToken'),
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.w600,
               color: Theme.of(context).colorScheme.onSurface,
@@ -540,7 +541,7 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
           ),
           const SizedBox(height: 8),
           Text(
-            'This is a test JWT token for authentication purposes.',
+            L10n.get('testJwtDescription'),
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
@@ -558,7 +559,7 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Learning content coming soon!',
+                    L10n.get('learningContentSoon'),
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const SizedBox(height: 16),
@@ -566,7 +567,7 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
                     onPressed: () {
                       ref.read(authModelProvider.notifier).getJwtToken();
                     },
-                    child: const Text("Test JWT Token"),
+                    child: Text(L10n.get('testJwtToken')),
                   ),
                 ],
               ),
@@ -584,7 +585,7 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Practice',
+            L10n.get('practice'),
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.w600,
               color: Theme.of(context).colorScheme.onSurface,
@@ -592,7 +593,7 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
           ),
           const SizedBox(height: 8),
           Text(
-            'Practice problems to improve your skills',
+            L10n.get('practiceDescription'),
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
@@ -610,7 +611,7 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Practice exercises coming soon!',
+                    L10n.get('practiceExercisesSoon'),
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                 ],
@@ -629,7 +630,7 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Analytics',
+            L10n.get('analytics'),
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.w600,
               color: Theme.of(context).colorScheme.onSurface,
@@ -637,7 +638,7 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
           ),
           const SizedBox(height: 8),
           Text(
-            'Track your progress and performance',
+            L10n.get('trackProgress'),
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
@@ -655,7 +656,7 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Analytics dashboard coming soon!',
+                    L10n.get('analyticsDashboardSoon'),
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                 ],
@@ -674,7 +675,7 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Profile',
+            L10n.get('profile'),
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.w600,
               color: Theme.of(context).colorScheme.onSurface,
@@ -682,7 +683,7 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
           ),
           const SizedBox(height: 8),
           Text(
-            'Manage your account and preferences',
+            L10n.get('manageAccount'),
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
@@ -700,7 +701,7 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Tap the profile icon in the top bar to access your profile',
+                    L10n.get('tapProfileIcon'),
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
@@ -726,7 +727,7 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
                       );
                     },
                     icon: const Icon(Icons.person),
-                    label: const Text('Open Profile'),
+                    label: Text(L10n.get('openProfile')),
                   ),
                 ],
               ),

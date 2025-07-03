@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,6 +7,7 @@ import 'package:gpt_markdown/custom_widgets/selectable_adapter.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
 import 'package:scribble/scribble.dart';
 import 'package:ai_math_helper/data/notebook/data/math_problem.dart';
+import 'package:ai_math_helper/data/notebook/model/notebook_model.dart';
 import 'package:ai_math_helper/services/authenticated_image_provider.dart';
 import 'package:ai_math_helper/services/api_service.dart';
 import 'package:ai_math_helper/data/notebook/data/ai_feedback.dart';
@@ -17,8 +19,9 @@ import 'dart:typed_data';
 
 class MathInputScreen extends ConsumerStatefulWidget {
   final MathProblem? problem;
+  final String? notebookId;
 
-  const MathInputScreen({super.key, this.problem});
+  const MathInputScreen({super.key, this.problem, this.notebookId});
 
   @override
   ConsumerState<MathInputScreen> createState() => _MathInputScreenState();
@@ -48,6 +51,11 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
   String? _resourceId; // Current resource ID for memory scoping
   bool _isLoadingHistory = false;
 
+  // Auto-save related fields
+  Timer? _autoSaveTimer;
+  bool _hasUnsavedChanges = false;
+  bool _isSaving = false;
+
   @override
   void initState() {
     super.initState();
@@ -62,10 +70,14 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
     // Set the color to black immediately
     notifier.setColor(Colors.black);
     _draggableController = DraggableScrollableController();
+
+    // Add listener for auto-save when canvas changes
+    notifier.addListener(_onCanvasChanged);
     // Load conversation history when the widget initializes
     if (widget.problem?.id != null) {
       _loadChatHistory();
       _loadProblemImageAsBackground();
+      _loadCanvasData();
     }
   }
 
@@ -84,6 +96,7 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
         widget.problem?.id != null) {
       _loadProblemImageAsBackground();
       _loadChatHistory();
+      _loadCanvasData();
     }
   }
 
@@ -193,6 +206,132 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
     
     stream.addListener(listener);
     return completer.future;
+  }
+
+  // Save current canvas drawing to scribbleData
+  Future<void> _saveCanvasData() async {
+    if (widget.problem?.id == null || widget.notebookId == null) {
+      debugPrint('Cannot save canvas: missing problem ID or notebook ID');
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+    });
+
+    try {
+      // Get current sketch from notifier
+      final currentSketch = notifier.currentSketch;
+      
+      // Convert to JSON and then to string
+      final jsonMap = currentSketch.toJson();
+      final jsonString = jsonEncode(jsonMap);
+      
+      // Update problem with new scribbleData
+      final success = await ref.read(notebookModelProvider.notifier).updateProblem(
+        notebookId: widget.notebookId!,
+        problemId: widget.problem!.id,
+        scribbleData: jsonString,
+      );
+      
+      if (success) {
+        debugPrint('Canvas data saved successfully');
+        _hasUnsavedChanges = false;
+      } else {
+        debugPrint('Failed to save canvas data');
+      }
+    } catch (error) {
+      debugPrint('Error saving canvas data: $error');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
+  }
+
+  // Load canvas drawing from scribbleData
+  Future<void> _loadCanvasData() async {
+    if (widget.problem?.scribbleData == null) {
+      debugPrint('No canvas data to load');
+      return;
+    }
+
+    try {
+      // Parse JSON string back to Map
+      final jsonMap = jsonDecode(widget.problem!.scribbleData!) as Map<String, dynamic>;
+      
+      // Create sketch from JSON
+      final sketch = Sketch.fromJson(jsonMap);
+      
+      // Set the sketch in the notifier (don't add to undo history for loading)
+      notifier.setSketch(sketch: sketch, addToUndoHistory: false);
+      
+      debugPrint('Canvas data loaded successfully');
+    } catch (error) {
+      debugPrint('Error loading canvas data: $error');
+      // Don't throw error, just log it - we can continue without canvas data
+    }
+  }
+
+  // Clear canvas with confirmation if there's existing data
+  void _clearCanvasWithConfirmation() {
+    final hasDrawing = notifier.currentSketch.lines.isNotEmpty;
+    final hasStoredData = widget.problem?.scribbleData != null;
+
+    if (hasDrawing || hasStoredData) {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Clear Drawing'),
+            content: const Text(
+              'Are you sure you want to clear the canvas? This will remove all your drawings.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  notifier.clear();
+                  // Auto-save the empty state
+                  if (widget.problem?.id != null && widget.notebookId != null) {
+                    _saveCanvasData();
+                  }
+                },
+                child: const Text('Clear'),
+              ),
+            ],
+          );
+        },
+      );
+    } else {
+      // No drawing, just clear
+      notifier.clear();
+    }
+  }
+
+  // Handle canvas changes for auto-save
+  void _onCanvasChanged() {
+    if (widget.problem?.id == null || widget.notebookId == null) return;
+
+    // Mark that we have unsaved changes
+    _hasUnsavedChanges = true;
+
+    // Cancel existing timer
+    _autoSaveTimer?.cancel();
+
+    // Start new timer for auto-save (3 seconds after user stops drawing)
+    _autoSaveTimer = Timer(const Duration(seconds: 3), () {
+      if (_hasUnsavedChanges && mounted) {
+        _saveCanvasData();
+        _hasUnsavedChanges = false;
+      }
+    });
   }
 
   // Load conversation history for the current problem
@@ -519,6 +658,10 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
 
   @override
   void dispose() {
+    // Clean up auto-save timer
+    _autoSaveTimer?.cancel();
+    // Remove listener
+    notifier.removeListener(_onCanvasChanged);
     notifier.dispose();
     _messageController.dispose();
     _draggableController.dispose();
@@ -559,7 +702,29 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.clear),
-            onPressed: () => notifier.clear(),
+            onPressed: () => _clearCanvasWithConfirmation(),
+          ),
+          IconButton(
+            icon: _isSaving
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Icon(
+                    _hasUnsavedChanges ? Icons.save : Icons.check,
+                    color: _hasUnsavedChanges ? null : Colors.green,
+                  ),
+            onPressed: widget.problem?.id != null && 
+                       widget.notebookId != null && 
+                       !_isSaving
+                ? _saveCanvasData
+                : null,
+            tooltip: _isSaving 
+                ? 'Saving...' 
+                : _hasUnsavedChanges 
+                    ? 'Save drawing' 
+                    : 'All changes saved',
           ),
           ElevatedButton.icon(
             onPressed: _checkAnswer,

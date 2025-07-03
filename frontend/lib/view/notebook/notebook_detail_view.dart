@@ -211,7 +211,10 @@ class _NotebookDetailViewState extends ConsumerState<NotebookDetailView> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => MathInputScreen(problem: problem),
+              builder: (context) => MathInputScreen(
+                problem: problem,
+                notebookId: widget.notebookId,
+              ),
             ),
           );
         },

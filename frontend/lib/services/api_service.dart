@@ -13,7 +13,7 @@ import 'package:ai_math_helper/data/notebook/data/chat_message.dart';
 
 class ApiService {
   static const String baseUrl =
-      'http://localhost:3000'; // Update for production
+      'http://daichinomacbook-air.local:3000'; // Update for production
 
   static Future<String?> _getAuthToken() async {
     final user = FirebaseAuth.instance.currentUser;
@@ -88,6 +88,64 @@ class ApiService {
     } catch (e) {
       debugPrint('Error updating profile: $e');
       return false;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> checkRegistrationStatus() async {
+    try {
+      final token = await _getAuthToken();
+      if (token == null) return null;
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/user/registration-status'),
+        headers: _getHeaders(token: token),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(utf8.decode(response.bodyBytes));
+        return data;
+      } else {
+        debugPrint('Failed to check registration status: ${response.statusCode}');
+        debugPrint('Response: ${response.body}');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('Error checking registration status: $e');
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> completeUserRegistration({
+    required String displayName,
+    required String grade,
+  }) async {
+    try {
+      final token = await _getAuthToken();
+      if (token == null) return null;
+
+      final body = {
+        'displayName': displayName,
+        'grade': grade,
+      };
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/user/register'),
+        headers: _getHeaders(token: token),
+        body: json.encode(body),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(utf8.decode(response.bodyBytes));
+        debugPrint('User registration completed successfully');
+        return data;
+      } else {
+        debugPrint('Failed to complete user registration: ${response.statusCode}');
+        debugPrint('Response: ${response.body}');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('Error completing user registration: $e');
+      return null;
     }
   }
 

@@ -1,5 +1,6 @@
 import 'package:ai_math_helper/config.dart';
 import 'package:ai_math_helper/data/user/model/auth_model.dart';
+import 'package:ai_math_helper/l10n/localization_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -31,7 +32,7 @@ class LoginPage extends ConsumerWidget {
 
                 // App Title
                 Text(
-                  appName,
+                  L10n.get('appName'),
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: Theme.of(context).colorScheme.primary,
@@ -41,7 +42,7 @@ class LoginPage extends ConsumerWidget {
 
                 // App Description
                 Text(
-                  'Your personal math learning assistant',
+                  L10n.get('personalMathAssistant'),
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
@@ -78,7 +79,7 @@ class LoginPage extends ConsumerWidget {
                                 width: 18,
                               ),
                               const SizedBox(width: 8),
-                              const Text('Sign in with Google'),
+                              Text(L10n.get('signInWithGoogle')),
                             ],
                           ),
                 ),

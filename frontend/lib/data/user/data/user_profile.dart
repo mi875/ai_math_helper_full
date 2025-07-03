@@ -17,6 +17,7 @@ abstract class UserProfile with _$UserProfile {
     required int totalTokens,
     required int usedTokens,
     required int remainingTokens,
+    bool? isProfileComplete,
   }) = _UserProfile;
 
   factory UserProfile.fromJson(Map<String, dynamic> json) =>

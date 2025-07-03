@@ -1,6 +1,5 @@
-// dart format width=80
-// coverage:ignore-file
 // GENERATED CODE - DO NOT MODIFY BY HAND
+// coverage:ignore-file
 // ignore_for_file: type=lint
 // ignore_for_file: unused_element, deprecated_member_use, deprecated_member_use_from_same_package, use_function_type_syntax_for_parameters, unnecessary_const, avoid_init_to_null, invalid_override_different_default_values_named, prefer_expression_function_bodies, annotate_overrides, invalid_annotation_target, unnecessary_question_mark
 
@@ -16,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$UserProfile {
 
- int get id; String get uid; String get email; String? get displayName; String? get grade; String? get gradeDisplayName; String? get profileImageUrl; String? get thumbnailUrl; int get totalTokens; int get usedTokens; int get remainingTokens;
+ int get id; String get uid; String get email; String? get displayName; String? get grade; String? get gradeDisplayName; String? get profileImageUrl; String? get thumbnailUrl; int get totalTokens; int get usedTokens; int get remainingTokens; bool? get isProfileComplete;
 /// Create a copy of UserProfile
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -29,16 +28,16 @@ $UserProfileCopyWith<UserProfile> get copyWith => _$UserProfileCopyWithImpl<User
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is UserProfile&&(identical(other.id, id) || other.id == id)&&(identical(other.uid, uid) || other.uid == uid)&&(identical(other.email, email) || other.email == email)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.grade, grade) || other.grade == grade)&&(identical(other.gradeDisplayName, gradeDisplayName) || other.gradeDisplayName == gradeDisplayName)&&(identical(other.profileImageUrl, profileImageUrl) || other.profileImageUrl == profileImageUrl)&&(identical(other.thumbnailUrl, thumbnailUrl) || other.thumbnailUrl == thumbnailUrl)&&(identical(other.totalTokens, totalTokens) || other.totalTokens == totalTokens)&&(identical(other.usedTokens, usedTokens) || other.usedTokens == usedTokens)&&(identical(other.remainingTokens, remainingTokens) || other.remainingTokens == remainingTokens));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is UserProfile&&(identical(other.id, id) || other.id == id)&&(identical(other.uid, uid) || other.uid == uid)&&(identical(other.email, email) || other.email == email)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.grade, grade) || other.grade == grade)&&(identical(other.gradeDisplayName, gradeDisplayName) || other.gradeDisplayName == gradeDisplayName)&&(identical(other.profileImageUrl, profileImageUrl) || other.profileImageUrl == profileImageUrl)&&(identical(other.thumbnailUrl, thumbnailUrl) || other.thumbnailUrl == thumbnailUrl)&&(identical(other.totalTokens, totalTokens) || other.totalTokens == totalTokens)&&(identical(other.usedTokens, usedTokens) || other.usedTokens == usedTokens)&&(identical(other.remainingTokens, remainingTokens) || other.remainingTokens == remainingTokens)&&(identical(other.isProfileComplete, isProfileComplete) || other.isProfileComplete == isProfileComplete));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,uid,email,displayName,grade,gradeDisplayName,profileImageUrl,thumbnailUrl,totalTokens,usedTokens,remainingTokens);
+int get hashCode => Object.hash(runtimeType,id,uid,email,displayName,grade,gradeDisplayName,profileImageUrl,thumbnailUrl,totalTokens,usedTokens,remainingTokens,isProfileComplete);
 
 @override
 String toString() {
-  return 'UserProfile(id: $id, uid: $uid, email: $email, displayName: $displayName, grade: $grade, gradeDisplayName: $gradeDisplayName, profileImageUrl: $profileImageUrl, thumbnailUrl: $thumbnailUrl, totalTokens: $totalTokens, usedTokens: $usedTokens, remainingTokens: $remainingTokens)';
+  return 'UserProfile(id: $id, uid: $uid, email: $email, displayName: $displayName, grade: $grade, gradeDisplayName: $gradeDisplayName, profileImageUrl: $profileImageUrl, thumbnailUrl: $thumbnailUrl, totalTokens: $totalTokens, usedTokens: $usedTokens, remainingTokens: $remainingTokens, isProfileComplete: $isProfileComplete)';
 }
 
 
@@ -49,7 +48,7 @@ abstract mixin class $UserProfileCopyWith<$Res>  {
   factory $UserProfileCopyWith(UserProfile value, $Res Function(UserProfile) _then) = _$UserProfileCopyWithImpl;
 @useResult
 $Res call({
- int id, String uid, String email, String? displayName, String? grade, String? gradeDisplayName, String? profileImageUrl, String? thumbnailUrl, int totalTokens, int usedTokens, int remainingTokens
+ int id, String uid, String email, String? displayName, String? grade, String? gradeDisplayName, String? profileImageUrl, String? thumbnailUrl, int totalTokens, int usedTokens, int remainingTokens, bool? isProfileComplete
 });
 
 
@@ -66,7 +65,7 @@ class _$UserProfileCopyWithImpl<$Res>
 
 /// Create a copy of UserProfile
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? uid = null,Object? email = null,Object? displayName = freezed,Object? grade = freezed,Object? gradeDisplayName = freezed,Object? profileImageUrl = freezed,Object? thumbnailUrl = freezed,Object? totalTokens = null,Object? usedTokens = null,Object? remainingTokens = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? uid = null,Object? email = null,Object? displayName = freezed,Object? grade = freezed,Object? gradeDisplayName = freezed,Object? profileImageUrl = freezed,Object? thumbnailUrl = freezed,Object? totalTokens = null,Object? usedTokens = null,Object? remainingTokens = null,Object? isProfileComplete = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,uid: null == uid ? _self.uid : uid // ignore: cast_nullable_to_non_nullable
@@ -79,18 +78,149 @@ as String?,thumbnailUrl: freezed == thumbnailUrl ? _self.thumbnailUrl : thumbnai
 as String?,totalTokens: null == totalTokens ? _self.totalTokens : totalTokens // ignore: cast_nullable_to_non_nullable
 as int,usedTokens: null == usedTokens ? _self.usedTokens : usedTokens // ignore: cast_nullable_to_non_nullable
 as int,remainingTokens: null == remainingTokens ? _self.remainingTokens : remainingTokens // ignore: cast_nullable_to_non_nullable
-as int,
+as int,isProfileComplete: freezed == isProfileComplete ? _self.isProfileComplete : isProfileComplete // ignore: cast_nullable_to_non_nullable
+as bool?,
   ));
 }
 
 }
 
 
+/// Adds pattern-matching-related methods to [UserProfile].
+extension UserProfilePatterns on UserProfile {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _UserProfile value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _UserProfile() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _UserProfile value)  $default,){
+final _that = this;
+switch (_that) {
+case _UserProfile():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _UserProfile value)?  $default,){
+final _that = this;
+switch (_that) {
+case _UserProfile() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String uid,  String email,  String? displayName,  String? grade,  String? gradeDisplayName,  String? profileImageUrl,  String? thumbnailUrl,  int totalTokens,  int usedTokens,  int remainingTokens,  bool? isProfileComplete)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _UserProfile() when $default != null:
+return $default(_that.id,_that.uid,_that.email,_that.displayName,_that.grade,_that.gradeDisplayName,_that.profileImageUrl,_that.thumbnailUrl,_that.totalTokens,_that.usedTokens,_that.remainingTokens,_that.isProfileComplete);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String uid,  String email,  String? displayName,  String? grade,  String? gradeDisplayName,  String? profileImageUrl,  String? thumbnailUrl,  int totalTokens,  int usedTokens,  int remainingTokens,  bool? isProfileComplete)  $default,) {final _that = this;
+switch (_that) {
+case _UserProfile():
+return $default(_that.id,_that.uid,_that.email,_that.displayName,_that.grade,_that.gradeDisplayName,_that.profileImageUrl,_that.thumbnailUrl,_that.totalTokens,_that.usedTokens,_that.remainingTokens,_that.isProfileComplete);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String uid,  String email,  String? displayName,  String? grade,  String? gradeDisplayName,  String? profileImageUrl,  String? thumbnailUrl,  int totalTokens,  int usedTokens,  int remainingTokens,  bool? isProfileComplete)?  $default,) {final _that = this;
+switch (_that) {
+case _UserProfile() when $default != null:
+return $default(_that.id,_that.uid,_that.email,_that.displayName,_that.grade,_that.gradeDisplayName,_that.profileImageUrl,_that.thumbnailUrl,_that.totalTokens,_that.usedTokens,_that.remainingTokens,_that.isProfileComplete);case _:
+  return null;
+
+}
+}
+
+}
+
 /// @nodoc
 @JsonSerializable()
 
 class _UserProfile implements UserProfile {
-  const _UserProfile({required this.id, required this.uid, required this.email, this.displayName, this.grade, this.gradeDisplayName, this.profileImageUrl, this.thumbnailUrl, required this.totalTokens, required this.usedTokens, required this.remainingTokens});
+  const _UserProfile({required this.id, required this.uid, required this.email, this.displayName, this.grade, this.gradeDisplayName, this.profileImageUrl, this.thumbnailUrl, required this.totalTokens, required this.usedTokens, required this.remainingTokens, this.isProfileComplete});
   factory _UserProfile.fromJson(Map<String, dynamic> json) => _$UserProfileFromJson(json);
 
 @override final  int id;
@@ -104,6 +234,7 @@ class _UserProfile implements UserProfile {
 @override final  int totalTokens;
 @override final  int usedTokens;
 @override final  int remainingTokens;
+@override final  bool? isProfileComplete;
 
 /// Create a copy of UserProfile
 /// with the given fields replaced by the non-null parameter values.
@@ -118,16 +249,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _UserProfile&&(identical(other.id, id) || other.id == id)&&(identical(other.uid, uid) || other.uid == uid)&&(identical(other.email, email) || other.email == email)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.grade, grade) || other.grade == grade)&&(identical(other.gradeDisplayName, gradeDisplayName) || other.gradeDisplayName == gradeDisplayName)&&(identical(other.profileImageUrl, profileImageUrl) || other.profileImageUrl == profileImageUrl)&&(identical(other.thumbnailUrl, thumbnailUrl) || other.thumbnailUrl == thumbnailUrl)&&(identical(other.totalTokens, totalTokens) || other.totalTokens == totalTokens)&&(identical(other.usedTokens, usedTokens) || other.usedTokens == usedTokens)&&(identical(other.remainingTokens, remainingTokens) || other.remainingTokens == remainingTokens));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _UserProfile&&(identical(other.id, id) || other.id == id)&&(identical(other.uid, uid) || other.uid == uid)&&(identical(other.email, email) || other.email == email)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.grade, grade) || other.grade == grade)&&(identical(other.gradeDisplayName, gradeDisplayName) || other.gradeDisplayName == gradeDisplayName)&&(identical(other.profileImageUrl, profileImageUrl) || other.profileImageUrl == profileImageUrl)&&(identical(other.thumbnailUrl, thumbnailUrl) || other.thumbnailUrl == thumbnailUrl)&&(identical(other.totalTokens, totalTokens) || other.totalTokens == totalTokens)&&(identical(other.usedTokens, usedTokens) || other.usedTokens == usedTokens)&&(identical(other.remainingTokens, remainingTokens) || other.remainingTokens == remainingTokens)&&(identical(other.isProfileComplete, isProfileComplete) || other.isProfileComplete == isProfileComplete));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,uid,email,displayName,grade,gradeDisplayName,profileImageUrl,thumbnailUrl,totalTokens,usedTokens,remainingTokens);
+int get hashCode => Object.hash(runtimeType,id,uid,email,displayName,grade,gradeDisplayName,profileImageUrl,thumbnailUrl,totalTokens,usedTokens,remainingTokens,isProfileComplete);
 
 @override
 String toString() {
-  return 'UserProfile(id: $id, uid: $uid, email: $email, displayName: $displayName, grade: $grade, gradeDisplayName: $gradeDisplayName, profileImageUrl: $profileImageUrl, thumbnailUrl: $thumbnailUrl, totalTokens: $totalTokens, usedTokens: $usedTokens, remainingTokens: $remainingTokens)';
+  return 'UserProfile(id: $id, uid: $uid, email: $email, displayName: $displayName, grade: $grade, gradeDisplayName: $gradeDisplayName, profileImageUrl: $profileImageUrl, thumbnailUrl: $thumbnailUrl, totalTokens: $totalTokens, usedTokens: $usedTokens, remainingTokens: $remainingTokens, isProfileComplete: $isProfileComplete)';
 }
 
 
@@ -138,7 +269,7 @@ abstract mixin class _$UserProfileCopyWith<$Res> implements $UserProfileCopyWith
   factory _$UserProfileCopyWith(_UserProfile value, $Res Function(_UserProfile) _then) = __$UserProfileCopyWithImpl;
 @override @useResult
 $Res call({
- int id, String uid, String email, String? displayName, String? grade, String? gradeDisplayName, String? profileImageUrl, String? thumbnailUrl, int totalTokens, int usedTokens, int remainingTokens
+ int id, String uid, String email, String? displayName, String? grade, String? gradeDisplayName, String? profileImageUrl, String? thumbnailUrl, int totalTokens, int usedTokens, int remainingTokens, bool? isProfileComplete
 });
 
 
@@ -155,7 +286,7 @@ class __$UserProfileCopyWithImpl<$Res>
 
 /// Create a copy of UserProfile
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? uid = null,Object? email = null,Object? displayName = freezed,Object? grade = freezed,Object? gradeDisplayName = freezed,Object? profileImageUrl = freezed,Object? thumbnailUrl = freezed,Object? totalTokens = null,Object? usedTokens = null,Object? remainingTokens = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? uid = null,Object? email = null,Object? displayName = freezed,Object? grade = freezed,Object? gradeDisplayName = freezed,Object? profileImageUrl = freezed,Object? thumbnailUrl = freezed,Object? totalTokens = null,Object? usedTokens = null,Object? remainingTokens = null,Object? isProfileComplete = freezed,}) {
   return _then(_UserProfile(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,uid: null == uid ? _self.uid : uid // ignore: cast_nullable_to_non_nullable
@@ -168,7 +299,8 @@ as String?,thumbnailUrl: freezed == thumbnailUrl ? _self.thumbnailUrl : thumbnai
 as String?,totalTokens: null == totalTokens ? _self.totalTokens : totalTokens // ignore: cast_nullable_to_non_nullable
 as int,usedTokens: null == usedTokens ? _self.usedTokens : usedTokens // ignore: cast_nullable_to_non_nullable
 as int,remainingTokens: null == remainingTokens ? _self.remainingTokens : remainingTokens // ignore: cast_nullable_to_non_nullable
-as int,
+as int,isProfileComplete: freezed == isProfileComplete ? _self.isProfileComplete : isProfileComplete // ignore: cast_nullable_to_non_nullable
+as bool?,
   ));
 }
 
@@ -240,6 +372,136 @@ as String,
 
 }
 
+
+/// Adds pattern-matching-related methods to [GradeOption].
+extension GradeOptionPatterns on GradeOption {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _GradeOption value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _GradeOption() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _GradeOption value)  $default,){
+final _that = this;
+switch (_that) {
+case _GradeOption():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _GradeOption value)?  $default,){
+final _that = this;
+switch (_that) {
+case _GradeOption() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String key,  String displayName,  String category)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _GradeOption() when $default != null:
+return $default(_that.key,_that.displayName,_that.category);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String key,  String displayName,  String category)  $default,) {final _that = this;
+switch (_that) {
+case _GradeOption():
+return $default(_that.key,_that.displayName,_that.category);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String key,  String displayName,  String category)?  $default,) {final _that = this;
+switch (_that) {
+case _GradeOption() when $default != null:
+return $default(_that.key,_that.displayName,_that.category);case _:
+  return null;
+
+}
+}
+
+}
 
 /// @nodoc
 @JsonSerializable()
@@ -381,6 +643,136 @@ as bool,
 
 }
 
+
+/// Adds pattern-matching-related methods to [TokenStatus].
+extension TokenStatusPatterns on TokenStatus {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _TokenStatus value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _TokenStatus() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _TokenStatus value)  $default,){
+final _that = this;
+switch (_that) {
+case _TokenStatus():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _TokenStatus value)?  $default,){
+final _that = this;
+switch (_that) {
+case _TokenStatus() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int totalTokens,  int usedTokens,  int remainingTokens,  DateTime resetDate,  bool hasLowTokens)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _TokenStatus() when $default != null:
+return $default(_that.totalTokens,_that.usedTokens,_that.remainingTokens,_that.resetDate,_that.hasLowTokens);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int totalTokens,  int usedTokens,  int remainingTokens,  DateTime resetDate,  bool hasLowTokens)  $default,) {final _that = this;
+switch (_that) {
+case _TokenStatus():
+return $default(_that.totalTokens,_that.usedTokens,_that.remainingTokens,_that.resetDate,_that.hasLowTokens);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int totalTokens,  int usedTokens,  int remainingTokens,  DateTime resetDate,  bool hasLowTokens)?  $default,) {final _that = this;
+switch (_that) {
+case _TokenStatus() when $default != null:
+return $default(_that.totalTokens,_that.usedTokens,_that.remainingTokens,_that.resetDate,_that.hasLowTokens);case _:
+  return null;
+
+}
+}
+
+}
 
 /// @nodoc
 @JsonSerializable()
