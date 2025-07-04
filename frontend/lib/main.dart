@@ -35,9 +35,7 @@ class MyApp extends ConsumerWidget {
       ),
       themeMode: ThemeMode.system,
       home: const AuthWrapper(),
-      routes: {
-        '/onboarding': (context) => const OnboardingScreen(),
-      },
+      routes: {'/onboarding': (context) => const OnboardingScreen()},
     );
   }
 }

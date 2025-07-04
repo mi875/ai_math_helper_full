@@ -13,7 +13,7 @@ import 'package:ai_math_helper/data/notebook/data/chat_message.dart';
 
 class ApiService {
   static const String baseUrl =
-      'http://daichinomacbook-air.local:3000'; // Update for production
+      'http://localhost:3000'; // Update for production
 
   static Future<String?> _getAuthToken() async {
     final user = FirebaseAuth.instance.currentUser;
@@ -105,7 +105,9 @@ class ApiService {
         final data = json.decode(utf8.decode(response.bodyBytes));
         return data;
       } else {
-        debugPrint('Failed to check registration status: ${response.statusCode}');
+        debugPrint(
+          'Failed to check registration status: ${response.statusCode}',
+        );
         debugPrint('Response: ${response.body}');
         return null;
       }
@@ -123,10 +125,7 @@ class ApiService {
       final token = await _getAuthToken();
       if (token == null) return null;
 
-      final body = {
-        'displayName': displayName,
-        'grade': grade,
-      };
+      final body = {'displayName': displayName, 'grade': grade};
 
       final response = await http.post(
         Uri.parse('$baseUrl/api/user/register'),
@@ -139,7 +138,9 @@ class ApiService {
         debugPrint('User registration completed successfully');
         return data;
       } else {
-        debugPrint('Failed to complete user registration: ${response.statusCode}');
+        debugPrint(
+          'Failed to complete user registration: ${response.statusCode}',
+        );
         debugPrint('Response: ${response.body}');
         return null;
       }

@@ -13,6 +13,7 @@ import 'package:ai_math_helper/services/api_service.dart';
 import 'package:ai_math_helper/data/notebook/data/ai_feedback.dart';
 import 'package:ai_math_helper/data/notebook/data/problem_status.dart';
 import 'package:ai_math_helper/data/notebook/data/chat_message.dart';
+import 'package:ai_math_helper/l10n/localization_helper.dart';
 import 'package:flutter/rendering.dart';
 import 'dart:ui' as ui;
 import 'dart:typed_data';
@@ -144,8 +145,8 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
 
     // Show a snackbar as feedback for now
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Answer checking functionality coming soon!'),
+      SnackBar(
+        content: Text(L10n.get('answerCheckingSoon')),
         duration: Duration(seconds: 2),
       ),
     );
@@ -285,14 +286,14 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
-            title: const Text('Clear Drawing'),
-            content: const Text(
-              'Are you sure you want to clear the canvas? This will remove all your drawings.',
+            title: Text(L10n.get('clearDrawing')),
+            content: Text(
+              L10n.get('clearDrawingConfirmation'),
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Cancel'),
+                child: Text(L10n.get('cancel')),
               ),
               FilledButton(
                 onPressed: () {
@@ -303,7 +304,7 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
                     _saveCanvasData();
                   }
                 },
-                child: const Text('Clear'),
+                child: Text(L10n.get('clear')),
               ),
             ],
           );
@@ -679,12 +680,12 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Math Input'),
+        title: Text(L10n.get('mathInput')),
         actions: [
           IconButton(
             icon: Icon(_isErasing ? Icons.edit : Icons.auto_fix_high),
             onPressed: _toggleDrawingMode,
-            tooltip: _isErasing ? 'Switch to pen' : 'Switch to eraser',
+            tooltip: _isErasing ? L10n.get('switchToPen') : L10n.get('switchToEraser'),
             color: _isErasing ? Colors.red : null,
           ),
           IconButton(
@@ -698,7 +699,7 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
           IconButton(
             icon: const Icon(Icons.zoom_out_map),
             onPressed: _resetView,
-            tooltip: 'Reset zoom and pan',
+            tooltip: L10n.get('resetZoomAndPan'),
           ),
           IconButton(
             icon: const Icon(Icons.clear),
@@ -721,15 +722,15 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
                 ? _saveCanvasData
                 : null,
             tooltip: _isSaving 
-                ? 'Saving...' 
+                ? L10n.get('saving') 
                 : _hasUnsavedChanges 
-                    ? 'Save drawing' 
-                    : 'All changes saved',
+                    ? L10n.get('saveDrawing') 
+                    : L10n.get('allChangesSaved'),
           ),
           ElevatedButton.icon(
             onPressed: _checkAnswer,
             icon: const Icon(Icons.check_circle_outline),
-            label: const Text('Check'),
+            label: Text(L10n.get('check')),
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.primary,
               foregroundColor: Theme.of(context).colorScheme.onPrimary,
@@ -749,7 +750,7 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                     : const Icon(Icons.psychology),
-            label: const Text('AI Help'),
+            label: Text(L10n.get('aiHelp')),
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.secondary,
               foregroundColor: Theme.of(context).colorScheme.onSecondary,
@@ -871,7 +872,7 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
                                     Expanded(
                                       // Allow title to take available space
                                       child: Text(
-                                        'AI Feedback & Tips',
+                                        L10n.get('aiFeedbackAndTips'),
                                         style: Theme.of(
                                           context,
                                         ).textTheme.titleMedium?.copyWith(
@@ -903,8 +904,8 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
                                         },
                                         tooltip:
                                             _isSheetWidthExpanded
-                                                ? 'Collapse width'
-                                                : 'Expand width',
+                                                ? L10n.get('collapseWidth')
+                                                : L10n.get('expandWidth'),
                                         color:
                                             Theme.of(
                                               context,
@@ -951,7 +952,7 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
                                         ),
                                         const SizedBox(height: 8),
                                         Text(
-                                          'Ask a question or tap "AI Help" for feedback',
+                                          L10n.get('askQuestionOrTapAiHelp'),
                                           style: Theme.of(
                                             context,
                                           ).textTheme.bodyMedium?.copyWith(
@@ -989,7 +990,7 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
                                 !_isSendingMessage &&
                                 widget.problem?.id != null,
                             decoration: InputDecoration(
-                              hintText: 'Ask a question...',
+                              hintText: L10n.get('askQuestion'),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(28.0),
                                 borderSide: BorderSide(
@@ -1296,7 +1297,7 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'Typing...',
+                            L10n.get('typing'),
                             style: TextStyle(
                               color: Theme.of(context)
                                   .colorScheme
@@ -1333,13 +1334,13 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
 
   Widget _buildCommonQuestionsChipRow() {
     final List<String> commonQuestions = [
-      "How do I solve for x?",
-      "What is the Pythagorean theorem?",
-      "What's the derivative of x^n?",
-      "What's the integral of 1/x?",
-      "What's the quadratic formula?",
-      "How do I find the area of a circle?",
-      "How do I find circumference?",
+      L10n.get('howToSolveForX'),
+      L10n.get('whatIsPythagorean'),
+      L10n.get('whatIsDerivative'),
+      L10n.get('whatIsIntegral'),
+      L10n.get('whatIsQuadratic'),
+      L10n.get('howToFindAreaCircle'),
+      L10n.get('howToFindCircumference'),
     ];
 
     return Padding(
