@@ -75,7 +75,6 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
           ),
         ],
       ),
-      drawer: isTablet ? null : _buildDrawer(),
       body: Row(
         children: [
           // Show Navigation Rail on tablet screens
@@ -117,11 +116,6 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
                     selectedIcon: Icon(Icons.bar_chart),
                     label: L10n.get('analytics'),
                   ),
-                  NavigationDestination(
-                    icon: Icon(Icons.person_outline),
-                    selectedIcon: Icon(Icons.person),
-                    label: L10n.get('profile'),
-                  ),
                 ],
               ),
       floatingActionButton: FloatingActionButton.large(
@@ -154,41 +148,36 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
         backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 1,
         destinations: [
-        NavigationRailDestination(
-          icon: Icon(Icons.home_outlined),
-          selectedIcon: Icon(Icons.home),
-          label: Text(L10n.get('home')),
-        ),
-        NavigationRailDestination(
-          icon: Icon(Icons.book_outlined),
-          selectedIcon: Icon(Icons.book),
-          label: Text(L10n.get('notebooks')),
-        ),
-        NavigationRailDestination(
-          icon: Icon(Icons.assignment_outlined),
-          selectedIcon: Icon(Icons.assignment),
-          label: Text(L10n.get('practice')),
-        ),
-        NavigationRailDestination(
-          icon: Icon(Icons.bar_chart_outlined),
-          selectedIcon: Icon(Icons.bar_chart),
-          label: Text(L10n.get('analytics')),
-        ),
-        NavigationRailDestination(
-          icon: Icon(Icons.person_outline),
-          selectedIcon: Icon(Icons.person),
-          label: Text(L10n.get('profile')),
-        ),
-        NavigationRailDestination(icon: Icon(Icons.key), label: Text("JWT")),
-      ],
-      selectedIndex: _selectedIndex,
-      onDestinationSelected: (int index) {
-        setState(() {
-          _selectedIndex = index;
-        });
-      },
-      leading: _buildNavigationRailHeader(),
-      // trailing: _isExtended ? _buildNavigationRailTrailing() : null,
+          NavigationRailDestination(
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home),
+            label: Text(L10n.get('home')),
+          ),
+          NavigationRailDestination(
+            icon: Icon(Icons.book_outlined),
+            selectedIcon: Icon(Icons.book),
+            label: Text(L10n.get('notebooks')),
+          ),
+          NavigationRailDestination(
+            icon: Icon(Icons.assignment_outlined),
+            selectedIcon: Icon(Icons.assignment),
+            label: Text(L10n.get('practice')),
+          ),
+          NavigationRailDestination(
+            icon: Icon(Icons.bar_chart_outlined),
+            selectedIcon: Icon(Icons.bar_chart),
+            label: Text(L10n.get('analytics')),
+          ),
+          NavigationRailDestination(icon: Icon(Icons.key), label: Text("JWT")),
+        ],
+        selectedIndex: _selectedIndex,
+        onDestinationSelected: (int index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+        },
+        leading: _buildNavigationRailHeader(),
+        // trailing: _isExtended ? _buildNavigationRailTrailing() : null,
       ),
     );
   }
@@ -220,27 +209,35 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
               duration: const Duration(milliseconds: 300),
               curve: Curves.easeInOutCubicEmphasized,
               opacity: _isExtended ? 1.0 : 0.0,
-              child: _isExtended
-                  ? Column(
-                      children: [
-                        const SizedBox(height: 12),
-                        Text(
-                          L10n.get('appName'),
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(context).colorScheme.onSurface,
+              child:
+                  _isExtended
+                      ? Column(
+                        children: [
+                          const SizedBox(height: 12),
+                          Text(
+                            L10n.get('appName'),
+                            style: Theme.of(
+                              context,
+                            ).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          L10n.get('learnAndPractice'),
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          const SizedBox(height: 8),
+                          Text(
+                            L10n.get('learnAndPractice'),
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodySmall?.copyWith(
+                              color:
+                                  Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
+                            ),
                           ),
-                        ),
-                      ],
-                    )
-                  : const SizedBox.shrink(),
+                        ],
+                      )
+                      : const SizedBox.shrink(),
             ),
           ),
           const SizedBox(height: 16),
@@ -249,7 +246,9 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+                color: Theme.of(
+                  context,
+                ).colorScheme.outline.withValues(alpha: 0.2),
               ),
             ),
             child: IconButton(
@@ -258,17 +257,17 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
                 switchInCurve: Curves.easeInOutCubicEmphasized,
                 switchOutCurve: Curves.easeInOutCubicEmphasized,
                 transitionBuilder: (Widget child, Animation<double> animation) {
-                  return ScaleTransition(
-                    scale: animation,
-                    child: child,
-                  );
+                  return ScaleTransition(scale: animation, child: child);
                 },
                 child: Icon(
                   _isExtended ? Icons.menu_open : Icons.menu,
                   key: ValueKey(_isExtended),
                 ),
               ),
-              tooltip: _isExtended ? L10n.get('collapseMenu') : L10n.get('expandMenu'),
+              tooltip:
+                  _isExtended
+                      ? L10n.get('collapseMenu')
+                      : L10n.get('expandMenu'),
               onPressed: () {
                 setState(() {
                   _isExtended = !_isExtended;
@@ -280,115 +279,6 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
                 }
               },
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDrawer() {
-    return Drawer(
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          DrawerHeader(
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary,
-            ),
-            child: Text(
-              L10n.get('appName'),
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onPrimary,
-                fontSize: 24,
-              ),
-            ),
-          ),
-          ListTile(
-            leading: Icon(
-              _selectedIndex == 0 ? Icons.home : Icons.home_outlined,
-              color:
-                  _selectedIndex == 0
-                      ? Theme.of(context).colorScheme.primary
-                      : null,
-            ),
-            title: Text(L10n.get('home')),
-            selected: _selectedIndex == 0,
-            onTap: () {
-              setState(() {
-                _selectedIndex = 0;
-              });
-              Navigator.pop(context);
-            },
-          ),
-          ListTile(
-            leading: Icon(
-              _selectedIndex == 1 ? Icons.book : Icons.book_outlined,
-              color:
-                  _selectedIndex == 1
-                      ? Theme.of(context).colorScheme.primary
-                      : null,
-            ),
-            title: Text(L10n.get('notebooks')),
-            selected: _selectedIndex == 1,
-            onTap: () {
-              setState(() {
-                _selectedIndex = 1;
-              });
-              Navigator.pop(context);
-            },
-          ),
-          ListTile(
-            leading: Icon(
-              _selectedIndex == 2
-                  ? Icons.assignment
-                  : Icons.assignment_outlined,
-              color:
-                  _selectedIndex == 2
-                      ? Theme.of(context).colorScheme.primary
-                      : null,
-            ),
-            title: Text(L10n.get('practice')),
-            selected: _selectedIndex == 2,
-            onTap: () {
-              setState(() {
-                _selectedIndex = 2;
-              });
-              Navigator.pop(context);
-            },
-          ),
-          ListTile(
-            leading: Icon(
-              _selectedIndex == 3 ? Icons.bar_chart : Icons.bar_chart_outlined,
-              color:
-                  _selectedIndex == 3
-                      ? Theme.of(context).colorScheme.primary
-                      : null,
-            ),
-            title: Text(L10n.get('analytics')),
-            selected: _selectedIndex == 3,
-            onTap: () {
-              setState(() {
-                _selectedIndex = 3;
-              });
-              Navigator.pop(context);
-            },
-          ),
-          ListTile(
-            leading: Icon(
-              _selectedIndex == 4 ? Icons.person : Icons.person_outline,
-              color:
-                  _selectedIndex == 4
-                      ? Theme.of(context).colorScheme.primary
-                      : null,
-            ),
-            title: Text(L10n.get('profile')),
-            selected: _selectedIndex == 4,
-            onTap: () {
-              setState(() {
-                _selectedIndex = 4;
-              });
-              Navigator.pop(context);
-            },
           ),
         ],
       ),
@@ -412,9 +302,6 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
         content = _buildAnalyticsContent();
         break;
       case 4:
-        content = _buildProfileContent();
-        break;
-      case 5:
         content = _buildJWTContent();
       default:
         content = _buildHomeContent();
@@ -658,76 +545,6 @@ class _MyHomePageState extends ConsumerState<MyHomePage>
                   Text(
                     L10n.get('analyticsDashboardSoon'),
                     style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProfileContent() {
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            L10n.get('profile'),
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            L10n.get('manageAccount'),
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 32),
-          Expanded(
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.person,
-                    size: 64,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    L10n.get('tapProfileIcon'),
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 16),
-                  FilledButton.icon(
-                    onPressed: () {
-                      showModalBottomSheet(
-                        context: context,
-                        isScrollControlled: true,
-                        enableDrag: true,
-                        showDragHandle: true,
-                        useSafeArea: true,
-                        builder:
-                            (context) => DraggableScrollableSheet(
-                              initialChildSize: 0.9,
-                              minChildSize: 0.5,
-                              maxChildSize: 0.95,
-                              expand: false,
-                              builder:
-                                  (context, scrollController) =>
-                                      const ProfileScreen(),
-                            ),
-                      );
-                    },
-                    icon: const Icon(Icons.person),
-                    label: Text(L10n.get('openProfile')),
                   ),
                 ],
               ),

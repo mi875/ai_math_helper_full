@@ -99,29 +99,7 @@ class _NotebookDetailViewState extends ConsumerState<NotebookDetailView> {
               },
               child: _buildProblemsList(context, ref, notebook),
             ),
-      floatingActionButton: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          FloatingActionButton(
-            heroTag: 'camera_fab',
-            onPressed: () => _importFromCamera(context, ref, notebook),
-            child: const Icon(Icons.camera_alt),
-          ),
-          const SizedBox(height: 8),
-          FloatingActionButton(
-            heroTag: 'gallery_fab',
-            onPressed: () => _importFromGallery(context, ref, notebook),
-            child: const Icon(Icons.photo_library),
-          ),
-          const SizedBox(height: 8),
-          FloatingActionButton.extended(
-            heroTag: 'add_fab',
-            onPressed: () => _showAddProblemDialog(context, ref, notebook),
-            icon: const Icon(Icons.add),
-            label: Text(L10n.get('addProblemFab')),
-          ),
-        ],
-      ),
+      floatingActionButton: _buildResponsiveFloatingActionButton(context, ref, notebook),
     );
   }
 
@@ -189,16 +167,45 @@ class _NotebookDetailViewState extends ConsumerState<NotebookDetailView> {
           ),
           const SizedBox(height: 16),
           Expanded(
-            child: ListView.builder(
-              itemCount: notebook.problems.length,
-              itemBuilder: (context, index) {
-                final problem = notebook.problems[index];
-                return _buildProblemCard(context, ref, notebook, problem);
-              },
-            ),
+            child: _buildResponsiveGrid(context, ref, notebook),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildResponsiveGrid(BuildContext context, WidgetRef ref, notebook) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final screenWidth = constraints.maxWidth;
+        final isTablet = screenWidth > 600;
+        final isDesktop = screenWidth > 1000;
+        
+        if (isTablet) {
+          final crossAxisCount = isDesktop ? 3 : 2;
+          return GridView.builder(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+              childAspectRatio: 0.8,
+            ),
+            itemCount: notebook.problems.length,
+            itemBuilder: (context, index) {
+              final problem = notebook.problems[index];
+              return _buildProblemCard(context, ref, notebook, problem);
+            },
+          );
+        } else {
+          return ListView.builder(
+            itemCount: notebook.problems.length,
+            itemBuilder: (context, index) {
+              final problem = notebook.problems[index];
+              return _buildProblemCard(context, ref, notebook, problem);
+            },
+          );
+        }
+      },
     );
   }
 
@@ -595,6 +602,65 @@ class _NotebookDetailViewState extends ConsumerState<NotebookDetailView> {
           );
         },
       ),
+    );
+  }
+
+  Widget _buildResponsiveFloatingActionButton(BuildContext context, WidgetRef ref, notebook) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final screenWidth = MediaQuery.of(context).size.width;
+        final isTablet = screenWidth > 600;
+        
+        if (isTablet) {
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              FloatingActionButton(
+                heroTag: 'camera_fab',
+                onPressed: () => _importFromCamera(context, ref, notebook),
+                child: const Icon(Icons.camera_alt),
+              ),
+              const SizedBox(width: 16),
+              FloatingActionButton(
+                heroTag: 'gallery_fab',
+                onPressed: () => _importFromGallery(context, ref, notebook),
+                child: const Icon(Icons.photo_library),
+              ),
+              const SizedBox(width: 16),
+              FloatingActionButton.extended(
+                heroTag: 'add_fab',
+                onPressed: () => _showAddProblemDialog(context, ref, notebook),
+                icon: const Icon(Icons.add),
+                label: Text(L10n.get('addProblemFab')),
+              ),
+            ],
+          );
+        } else {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              FloatingActionButton(
+                heroTag: 'camera_fab',
+                onPressed: () => _importFromCamera(context, ref, notebook),
+                child: const Icon(Icons.camera_alt),
+              ),
+              const SizedBox(height: 8),
+              FloatingActionButton(
+                heroTag: 'gallery_fab',
+                onPressed: () => _importFromGallery(context, ref, notebook),
+                child: const Icon(Icons.photo_library),
+              ),
+              const SizedBox(height: 8),
+              FloatingActionButton.extended(
+                heroTag: 'add_fab',
+                onPressed: () => _showAddProblemDialog(context, ref, notebook),
+                icon: const Icon(Icons.add),
+                label: Text(L10n.get('addProblemFab')),
+              ),
+            ],
+          );
+        }
+      },
     );
   }
 
