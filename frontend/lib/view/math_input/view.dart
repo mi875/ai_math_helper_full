@@ -373,7 +373,7 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
   String _currentStreamingText = '';
 
   Future<void> _generateAiFeedback() async {
-    // Use the chat message system for AI feedback
+    // Use the chat message system for AI feedback with canvas analysis
     await _sendChatMessage("Please analyze my solution and provide feedback");
   }
 
@@ -508,56 +508,33 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
       } catch (streamingError) {
         debugPrint('Streaming failed: $streamingError');
 
-        // Fallback to original non-streaming API
-        try {
+        // Remove temporary streaming message and show error with retry option
+        if (_aiFeedbacks.isNotEmpty &&
+            _aiFeedbacks[0].id == 'streaming-temp') {
           setState(() {
-            _currentStreamingText = 'Streaming failed. Using regular API...';
-            _aiFeedbacks[0] = _aiFeedbacks[0].copyWith(
-              message: _currentStreamingText,
-            );
-            _chatMessages[0] = _chatMessages[0].copyWith(
-              message: _currentStreamingText,
-            );
+            _aiFeedbacks.removeAt(0);
           });
-
-          final feedback = await ApiService.generateAiFeedback(
-            widget.problem!.id,
-            canvasImageBytes ?? Uint8List(0),
-            customMessage: message,
-          );
-
-          if (feedback != null) {
-            final fallbackMessage = ChatMessage.ai(
-              id: feedback.id,
-              message: feedback.message,
-              timestamp: feedback.timestamp,
-              feedbackType: feedback.type.toString().split('.').last,
-              threadId: _threadId,
-              resourceId: _resourceId,
-            );
-
-            setState(() {
-              _aiFeedbacks[0] = feedback;
-              _chatMessages[0] = fallbackMessage;
-            });
-          } else {
-            throw Exception('Fallback API also failed');
-          }
-        } catch (fallbackError) {
-          if (_aiFeedbacks.isNotEmpty &&
-              _aiFeedbacks[0].id == 'streaming-temp') {
-            setState(() {
-              _aiFeedbacks.removeAt(0);
-            });
-          }
-          if (_chatMessages.isNotEmpty &&
-              _chatMessages[0].state == ConversationState.streaming) {
-            setState(() {
-              _chatMessages.removeAt(0);
-            });
-          }
-          throw Exception('Both streaming and fallback failed: $fallbackError');
         }
+        if (_chatMessages.isNotEmpty &&
+            _chatMessages[0].state == ConversationState.streaming) {
+          setState(() {
+            _chatMessages.removeAt(0);
+          });
+        }
+        
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(
+            content: Text(L10n.get('streamingFailedMessage')),
+            action: SnackBarAction(
+              label: L10n.get('retryButton'),
+              onPressed: () => _sendChatMessage(message),
+            ),
+            duration: Duration(seconds: 5),
+          ));
+        }
+        return; // Exit early, don't continue with error handling
       }
     } catch (error) {
       if (_aiFeedbacks.isNotEmpty && _aiFeedbacks[0].id == 'streaming-temp') {
@@ -572,9 +549,11 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
         });
       }
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error sending message: $error')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error sending message: $error')));
+      }
     } finally {
       setState(() {
         _isSendingMessage = false;
@@ -603,32 +582,180 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
     });
 
     try {
-      // Send text-only message to API
-      final responseData = await ApiService.sendTextMessage(
-        widget.problem!.id,
-        message,
+      // Determine if this is an AI Help request (includes "analyze" or "feedback")
+      final isAiHelpRequest = message.toLowerCase().contains('analyze') || 
+                             message.toLowerCase().contains('feedback') ||
+                             message.toLowerCase().contains('solution');
+      
+      Uint8List? canvasImageBytes;
+      
+      // For AI Help requests, always try to capture canvas
+      // For regular text messages, allow pure text streaming
+      if (isAiHelpRequest) {
+        try {
+          canvasImageBytes = await _captureCanvasAsImage();
+          debugPrint('AI Help request: captured canvas for analysis');
+        } catch (canvasError) {
+          debugPrint('AI Help: Canvas capture failed, proceeding anyway: $canvasError');
+          canvasImageBytes = null;
+        }
+      } else {
+        // For regular text messages, only capture canvas if it has meaningful content
+        try {
+          canvasImageBytes = await _captureCanvasAsImage();
+          // Check if canvas is just empty/default - if so, treat as text-only
+          if (canvasImageBytes != null && canvasImageBytes.length < 1000) {
+            // Very small canvas images are likely empty, treat as text-only
+            canvasImageBytes = null;
+            debugPrint('Empty canvas detected, using text-only streaming');
+          }
+        } catch (canvasError) {
+          debugPrint('Canvas capture failed, proceeding with text-only: $canvasError');
+          canvasImageBytes = null;
+        }
+      }
+
+      // Create a temporary feedback object for streaming display
+      final tempFeedback = AiFeedback(
+        id: 'streaming-temp',
+        message: '',
+        timestamp: DateTime.now(),
+        type: FeedbackType.suggestion,
       );
 
-      if (responseData != null) {
-        final aiMessage = ApiService.parseMessageResponse(
-          responseData,
-          threadId: _threadId,
-          resourceId: _resourceId,
-        );
+      // Create temporary streaming AI message
+      final streamingMessage = ChatMessage.aiStreaming(
+        message: '',
+        threadId: _threadId,
+        resourceId: _resourceId,
+      );
 
-        setState(() {
-          _chatMessages.insert(0, aiMessage);
-          // Update thread info if not already set
-          _threadId ??= aiMessage.threadId;
-          _resourceId ??= aiMessage.resourceId;
-        });
-      } else {
-        throw Exception('Failed to get response from AI');
+      // Add temporary AI message to chat
+      setState(() {
+        _aiFeedbacks.insert(0, tempFeedback);
+        _chatMessages.insert(0, streamingMessage);
+      });
+
+      // Use appropriate streaming method based on whether we have canvas data
+      try {
+        Stream<Map<String, dynamic>> streamSource;
+        
+        if (canvasImageBytes != null) {
+          debugPrint('Streaming with canvas image (${canvasImageBytes.length} bytes)');
+          streamSource = ApiService.streamAiFeedback(
+            widget.problem!.id,
+            canvasImageBytes,
+            customMessage: message,
+          );
+        } else {
+          debugPrint('Streaming text-only message without canvas');
+          streamSource = ApiService.streamTextMessage(
+            widget.problem!.id,
+            message,
+          );
+        }
+        
+        await for (final chunk in streamSource) {
+          if (!mounted) break;
+
+          switch (chunk['type']) {
+            case 'start':
+              setState(() {
+                _currentStreamingText =
+                    chunk['message'] ?? 'AI is responding...';
+                _aiFeedbacks[0] = _aiFeedbacks[0].copyWith(
+                  message: _currentStreamingText,
+                );
+                _chatMessages[0] = _chatMessages[0].copyWith(
+                  message: _currentStreamingText,
+                );
+              });
+              break;
+
+            case 'chunk':
+              setState(() {
+                _currentStreamingText = chunk['fullText'] ?? '';
+                _aiFeedbacks[0] = _aiFeedbacks[0].copyWith(
+                  message: _currentStreamingText,
+                );
+                _chatMessages[0] = _chatMessages[0].copyWith(
+                  message: _currentStreamingText,
+                );
+              });
+              break;
+
+            case 'complete':
+              final completedFeedback = AiFeedback(
+                id: chunk['id'],
+                message: chunk['message'],
+                timestamp: DateTime.parse(chunk['timestamp']),
+                type: _parseFeedbackType(chunk['feedbackType']),
+              );
+
+              final completedMessage = ChatMessage.ai(
+                id: chunk['id'],
+                message: chunk['message'],
+                timestamp: DateTime.parse(chunk['timestamp']),
+                feedbackType: chunk['feedbackType'],
+                threadId: _threadId,
+                resourceId: _resourceId,
+                tokensConsumed: chunk['tokensConsumed'] as int?,
+              );
+
+              setState(() {
+                _aiFeedbacks[0] = completedFeedback;
+                _chatMessages[0] = completedMessage;
+                // Update thread info if returned from backend
+                _threadId ??= chunk['threadId'] as String?;
+                _resourceId ??= chunk['resourceId'] as String?;
+              });
+              break;
+
+            case 'error':
+              setState(() {
+                _aiFeedbacks.removeAt(0);
+                _chatMessages.removeAt(0);
+              });
+              throw Exception(chunk['error'] ?? 'Unknown streaming error');
+          }
+        }
+      } catch (streamingError) {
+        debugPrint('Text message streaming failed: $streamingError');
+
+        // Remove temporary streaming message and show error with retry option
+        if (_aiFeedbacks.isNotEmpty &&
+            _aiFeedbacks[0].id == 'streaming-temp') {
+          setState(() {
+            _aiFeedbacks.removeAt(0);
+          });
+        }
+        if (_chatMessages.isNotEmpty &&
+            _chatMessages[0].state == ConversationState.streaming) {
+          setState(() {
+            _chatMessages.removeAt(0);
+          });
+        }
+        
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(
+            content: Text(L10n.get('messageSendingFailedMessage')),
+            action: SnackBarAction(
+              label: L10n.get('retryButton'),
+              onPressed: () => _sendChatMessage(message),
+            ),
+            duration: Duration(seconds: 5),
+          ));
+        }
+        return; // Exit early
       }
     } catch (error) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error sending message: $error')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error sending message: $error')));
+      }
     } finally {
       setState(() {
         _isSendingMessage = false;
@@ -823,7 +950,6 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
                           onTap: _expandSheet,
                           onPanUpdate: (details) {
                             // Calculate the new position based on pan delta
-                            final RenderBox renderBox = context.findRenderObject() as RenderBox;
                             final screenHeight = MediaQuery.of(context).size.height;
                             final currentPosition = _draggableController.size;
                             
@@ -1070,13 +1196,13 @@ class _MathInputScreenState extends ConsumerState<MathInputScreen> {
     final difference = now.difference(timestamp);
 
     if (difference.inMinutes < 1) {
-      return 'たった今';
+      return L10n.get('justNow');
     } else if (difference.inHours < 1) {
-      return '${difference.inMinutes}分前';
+      return '${difference.inMinutes}${L10n.get('minutesAgo')}';
     } else if (difference.inDays < 1) {
-      return '${difference.inHours}時間前';
+      return '${difference.inHours}${L10n.get('hoursAgo')}';
     } else {
-      return '${difference.inDays}日前';
+      return '${difference.inDays}${L10n.get('daysAgoShort')}';
     }
   }
 

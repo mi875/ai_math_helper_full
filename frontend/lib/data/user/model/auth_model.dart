@@ -10,12 +10,19 @@ part 'auth_model.g.dart';
 class AuthModel extends _$AuthModel {
   @override
   AuthData build() {
-    // Add listener for auth state changes
-    FirebaseAuth.instance.authStateChanges().listen(_onAuthStateChanged);
-    return const AuthData();
+    // Set up auth state listener with proper lifecycle management
+    final subscription = FirebaseAuth.instance.authStateChanges().listen(_onAuthStateChanged);
+    ref.onDispose(() {
+      subscription.cancel();
+    });
+    
+    // Initialize with current user
+    final currentUser = FirebaseAuth.instance.currentUser;
+    return AuthData(user: currentUser);
   }
 
   void _onAuthStateChanged(User? user) {
+    log('Auth state changed: user is ${user != null ? 'authenticated' : 'null'}');
     state = state.copyWith(user: user);
   }
 
@@ -53,11 +60,19 @@ class AuthModel extends _$AuthModel {
 
   Future<void> signOut() async {
     try {
+      log('Starting sign out process');
       state = state.copyWith(isLoading: true, errorMessage: null);
+      
       await FirebaseAuth.instance.signOut();
+      log('Firebase sign out completed');
+      
       await GoogleSignIn().signOut();
+      log('Google sign out completed');
+      
       state = state.copyWith(isLoading: false);
+      log('Sign out process completed successfully');
     } catch (e) {
+      log('Sign out error: $e');
       state = state.copyWith(isLoading: false, errorMessage: e.toString());
     }
   }

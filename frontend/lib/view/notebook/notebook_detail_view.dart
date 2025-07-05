@@ -6,6 +6,7 @@ import 'package:ai_math_helper/view/math_input/view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../l10n/localization_helper.dart';
 
 class NotebookDetailView extends ConsumerStatefulWidget {
   final String notebookId;
@@ -39,10 +40,10 @@ class _NotebookDetailViewState extends ConsumerState<NotebookDetailView> {
     if (notebook == null) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text('Notebook Not Found'),
+          title: Text(L10n.get('notebookNotFoundTitle')),
         ),
-        body: const Center(
-          child: Text('The requested notebook could not be found.'),
+        body: Center(
+          child: Text(L10n.get('notebookNotFoundMessage')),
         ),
       );
     }
@@ -59,23 +60,23 @@ class _NotebookDetailViewState extends ConsumerState<NotebookDetailView> {
           ),
           PopupMenuButton(
             itemBuilder: (context) => [
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'edit',
                 child: Row(
                   children: [
                     Icon(Icons.edit),
                     SizedBox(width: 8),
-                    Text('Edit Notebook'),
+                    Text(L10n.get('editNotebookOption')),
                   ],
                 ),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'share',
                 child: Row(
                   children: [
                     Icon(Icons.share),
                     SizedBox(width: 8),
-                    Text('Share'),
+                    Text(L10n.get('shareOption')),
                   ],
                 ),
               ),
@@ -117,7 +118,7 @@ class _NotebookDetailViewState extends ConsumerState<NotebookDetailView> {
             heroTag: 'add_fab',
             onPressed: () => _showAddProblemDialog(context, ref, notebook),
             icon: const Icon(Icons.add),
-            label: const Text('Add Problem'),
+            label: Text(L10n.get('addProblemFab')),
           ),
         ],
       ),
@@ -138,14 +139,14 @@ class _NotebookDetailViewState extends ConsumerState<NotebookDetailView> {
             ),
             const SizedBox(height: 24),
             Text(
-              'No Problems Yet',
+              L10n.get('noProblemsYetTitle'),
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: 16),
             Text(
-              'Start adding math problems to organize your learning',
+              L10n.get('startAddingProblemsDescription'),
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
@@ -159,12 +160,12 @@ class _NotebookDetailViewState extends ConsumerState<NotebookDetailView> {
                 FilledButton.icon(
                   onPressed: () => _importFromCamera(context, ref, notebook),
                   icon: const Icon(Icons.camera_alt),
-                  label: const Text('Scan Problem'),
+                  label: Text(L10n.get('scanProblemButton')),
                 ),
                 OutlinedButton.icon(
                   onPressed: () => _showAddProblemDialog(context, ref, notebook),
                   icon: const Icon(Icons.add),
-                  label: const Text('Add Manually'),
+                  label: Text(L10n.get('addManuallyButton')),
                 ),
               ],
             ),
@@ -303,23 +304,23 @@ class _NotebookDetailViewState extends ConsumerState<NotebookDetailView> {
                   const Spacer(),
                   PopupMenuButton(
                     itemBuilder: (context) => [
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'edit',
                         child: Row(
                           children: [
                             Icon(Icons.edit),
                             SizedBox(width: 8),
-                            Text('Edit'),
+                            Text(L10n.get('editOption')),
                           ],
                         ),
                       ),
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'delete',
                         child: Row(
                           children: [
                             Icon(Icons.delete),
                             SizedBox(width: 8),
-                            Text('Delete'),
+                            Text(L10n.get('deleteOption')),
                           ],
                         ),
                       ),
@@ -349,22 +350,22 @@ class _NotebookDetailViewState extends ConsumerState<NotebookDetailView> {
     switch (status.toString().split('.').last) {
       case 'solved':
         chipColor = Colors.green;
-        statusText = 'Solved';
+        statusText = L10n.get('solvedStatus');
         icon = Icons.check_circle;
         break;
       case 'inProgress':
         chipColor = Colors.orange;
-        statusText = 'In Progress';
+        statusText = L10n.get('inProgressStatus');
         icon = Icons.pending;
         break;
       case 'needsHelp':
         chipColor = Colors.red;
-        statusText = 'Needs Help';
+        statusText = L10n.get('needsHelpStatus');
         icon = Icons.help;
         break;
       default:
         chipColor = Colors.grey;
-        statusText = 'Unsolved';
+        statusText = L10n.get('unsolvedStatus');
         icon = Icons.radio_button_unchecked;
     }
 
@@ -385,11 +386,11 @@ class _NotebookDetailViewState extends ConsumerState<NotebookDetailView> {
     final difference = now.difference(date);
 
     if (difference.inDays == 0) {
-      return 'Today';
+      return L10n.get('todayLabel');
     } else if (difference.inDays == 1) {
-      return 'Yesterday';
+      return L10n.get('yesterdayLabel');
     } else if (difference.inDays < 7) {
-      return '${difference.inDays} days ago';
+      return '${difference.inDays} ${L10n.get('daysAgoLabel')}';
     } else {
       return '${date.day}/${date.month}/${date.year}';
     }
@@ -403,8 +404,8 @@ class _NotebookDetailViewState extends ConsumerState<NotebookDetailView> {
       } else {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Camera permission is required to scan documents. Please enable camera access in your device settings.'),
+            SnackBar(
+              content: Text(L10n.get('cameraPermissionMessage')),
               duration: Duration(seconds: 4),
             ),
           );
@@ -443,7 +444,7 @@ class _NotebookDetailViewState extends ConsumerState<NotebookDetailView> {
     // Show loading indicator
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Row(
             children: [
               SizedBox(
@@ -452,7 +453,7 @@ class _NotebookDetailViewState extends ConsumerState<NotebookDetailView> {
                 child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
               ),
               SizedBox(width: 16),
-              Text('Creating problem with images...'),
+              Text(L10n.get('creatingProblemWithImagesMessage')),
             ],
           ),
           duration: Duration(seconds: 10),
@@ -476,7 +477,7 @@ class _NotebookDetailViewState extends ConsumerState<NotebookDetailView> {
               children: [
                 const Icon(Icons.check_circle, color: Colors.white),
                 const SizedBox(width: 8),
-                const Text('Problem added successfully!'),
+                Text(L10n.get('problemAddedSuccessMessage')),
               ],
             ),
             backgroundColor: Colors.green,
@@ -515,7 +516,7 @@ class _NotebookDetailViewState extends ConsumerState<NotebookDetailView> {
         onProblemAdded: (tags, imageFile) async {
           // Show loading indicator
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
+            SnackBar(
               content: Row(
                 children: [
                   SizedBox(
@@ -524,7 +525,7 @@ class _NotebookDetailViewState extends ConsumerState<NotebookDetailView> {
                     child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                   ),
                   SizedBox(width: 16),
-                  Text('Creating problem...'),
+                  Text(L10n.get('creatingProblemMessage')),
                 ],
               ),
               duration: Duration(seconds: 10),
@@ -549,7 +550,7 @@ class _NotebookDetailViewState extends ConsumerState<NotebookDetailView> {
                     children: [
                       const Icon(Icons.check_circle, color: Colors.white),
                       const SizedBox(width: 8),
-                      const Text('Problem added successfully!'),
+                      Text(L10n.get('problemAddedSuccessMessage')),
                     ],
                   ),
                   backgroundColor: Colors.green,
@@ -606,14 +607,14 @@ class _NotebookDetailViewState extends ConsumerState<NotebookDetailView> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Problem'),
+        title: Text(L10n.get('deleteProblemTitle')),
         content: Text(
-          'Are you sure you want to delete this problem? This action cannot be undone.',
+          L10n.get('deleteProblemConfirmation'),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: Text(L10n.get('cancelButton')),
           ),
           FilledButton(
             onPressed: () {
@@ -623,7 +624,7 @@ class _NotebookDetailViewState extends ConsumerState<NotebookDetailView> {
               );
               Navigator.of(context).pop();
             },
-            child: const Text('Delete'),
+            child: Text(L10n.get('deleteButton')),
           ),
         ],
       ),

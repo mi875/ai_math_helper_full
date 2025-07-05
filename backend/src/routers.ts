@@ -11,6 +11,7 @@ import {
 } from './controllers/userController.js';
 import { tokenController } from './controllers/tokenController.js';
 import { notebookController } from './controllers/notebookController.js';
+import { cacheController } from './controllers/cacheController.js';
 import { 
   profileImageUploadMiddleware, 
   serveProfileImage,
@@ -59,9 +60,10 @@ apiRouter.post('/notebooks/:uid/problems', notebookController.createProblem);
 apiRouter.put('/problems/:problemUid', notebookController.updateProblem);
 apiRouter.delete('/problems/:problemUid', notebookController.deleteProblem);
 apiRouter.get('/problems/:problemUid/feedbacks', notebookController.getProblemFeedbacks);
+// Force all AI feedback to use streaming - redirect old non-streaming endpoint
 apiRouter.post('/problems/:problemUid/feedback/generate', 
   problemImageUploadMiddleware(), 
-  notebookController.generateAiFeedback
+  notebookController.streamAiFeedback // Use streaming instead
 );
 apiRouter.post('/problems/:problemUid/feedback/stream', 
   problemImageUploadMiddleware(), 
@@ -70,13 +72,22 @@ apiRouter.post('/problems/:problemUid/feedback/stream',
 
 // Chat endpoints for conversation history
 apiRouter.get('/problems/:problemUid/chat/history', notebookController.getChatHistory);
-apiRouter.post('/problems/:problemUid/chat/send', notebookController.sendChatMessage);
+// All chat messages now use streaming - redirect to streaming endpoint
+apiRouter.post('/problems/:problemUid/chat/send', 
+  problemImageUploadMiddleware(), 
+  notebookController.streamAiFeedback // Use streaming for all chat
+);
 
 // Problem image upload endpoint
 apiRouter.post('/problems/images/upload', 
   problemImageUploadMiddleware(), 
   notebookController.uploadProblemImages
 );
+
+// Cache management endpoints
+apiRouter.get('/cache/stats', cacheController.getCacheStats);
+apiRouter.get('/cache/performance', cacheController.getCachePerformance);
+apiRouter.post('/cache/clear', cacheController.clearCache);
 
 // Health check endpoint - public, no auth needed
 // and hello world

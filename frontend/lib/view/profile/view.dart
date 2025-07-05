@@ -1,4 +1,5 @@
 import 'package:ai_math_helper/data/user/model/auth_model.dart';
+import '../../l10n/localization_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -53,7 +54,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Profile',
+                  L10n.get('profileTitle'),
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -63,7 +64,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     if (_isEditing)
                       TextButton(
                         onPressed: _saveProfile,
-                        child: const Text('Save'),
+                        child: Text(L10n.get('save')),
                       )
                     else
                       IconButton(
@@ -155,7 +156,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                'Display Name',
+                                L10n.get('displayNameLabel'),
                                 style: Theme.of(context).textTheme.titleMedium
                                     ?.copyWith(fontWeight: FontWeight.bold),
                               ),
@@ -165,9 +166,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           if (_isEditing)
                             TextField(
                               controller: _displayNameController,
-                              decoration: const InputDecoration(
-                                hintText: 'Enter your display name',
-                                border: OutlineInputBorder(),
+                              decoration: InputDecoration(
+                                hintText: L10n.get('enterDisplayNameHint'),
+                                border: const OutlineInputBorder(),
                               ),
                             )
                           else
@@ -187,7 +188,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               ),
                               child: Text(
                                 _displayNameController.text.isEmpty
-                                    ? 'No display name set'
+                                    ? L10n.get('noDisplayNameSet')
                                     : _displayNameController.text,
                                 style: Theme.of(context).textTheme.bodyLarge,
                               ),
@@ -214,7 +215,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                'Grade Level',
+                                L10n.get('gradeLevelLabel'),
                                 style: Theme.of(context).textTheme.titleMedium
                                     ?.copyWith(fontWeight: FontWeight.bold),
                               ),
@@ -232,14 +233,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               ),
                               items:
                                   [
-                                        'Grade 6',
-                                        'Grade 7',
-                                        'Grade 8',
-                                        'Grade 9',
-                                        'Grade 10',
-                                        'Grade 11',
-                                        'Grade 12',
-                                        'College/University',
+                                        L10n.get('grade6'),
+                                        L10n.get('grade7'),
+                                        L10n.get('grade8'),
+                                        L10n.get('grade9'),
+                                        L10n.get('grade10'),
+                                        L10n.get('grade11'),
+                                        L10n.get('grade12'),
+                                        L10n.get('collegeUniversity'),
                                       ]
                                       .map(
                                         (grade) => DropdownMenuItem(
@@ -271,7 +272,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               ),
                               child: Text(
                                 _gradeController.text.isEmpty
-                                    ? 'No grade selected'
+                                    ? L10n.get('noGradeSelected')
                                     : _gradeController.text,
                                 style: Theme.of(context).textTheme.bodyLarge,
                               ),
@@ -298,7 +299,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                'Email',
+                                L10n.get('emailLabel'),
                                 style: Theme.of(context).textTheme.titleMedium
                                     ?.copyWith(fontWeight: FontWeight.bold),
                               ),
@@ -323,7 +324,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
-                              user?.email ?? 'No email',
+                              user?.email ?? L10n.get('noEmailText'),
                               style: Theme.of(
                                 context,
                               ).textTheme.bodyLarge?.copyWith(
@@ -349,7 +350,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         _showSignOutDialog();
                       },
                       icon: const Icon(Icons.logout),
-                      label: const Text('Sign Out'),
+                      label: Text(L10n.get('signOutButton')),
                       style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
@@ -374,8 +375,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Profile updated successfully!'),
+      SnackBar(
+        content: Text(L10n.get('profileUpdatedSuccess')),
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -396,21 +397,21 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Sign Out'),
-          content: const Text('Are you sure you want to sign out?'),
+          title: Text(L10n.get('signOutButton')),
+          content: Text(L10n.get('signOutDialogContent')),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: const Text('Cancel'),
+              child: Text(L10n.get('cancelButton')),
             ),
             FilledButton(
               onPressed: () {
                 Navigator.of(context).pop();
                 ref.read(authModelProvider.notifier).signOut();
               },
-              child: const Text('Sign Out'),
+              child: Text(L10n.get('signOutButton')),
             ),
           ],
         );

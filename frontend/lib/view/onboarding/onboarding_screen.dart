@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:ai_math_helper/view/home/view.dart';
 import 'package:ai_math_helper/config.dart';
+import 'package:ai_math_helper/l10n/localization_helper.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -86,7 +87,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               alignment: Alignment.topRight,
               child: TextButton(
                 onPressed: _finishOnboarding,
-                child: const Text('スキップ'),
+                child: Text(L10n.get('skipButton')),
               ),
             ),
             // Page content
@@ -132,7 +133,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     Expanded(
                       child: OutlinedButton(
                         onPressed: _previousPage,
-                        child: const Text('戻る'),
+                        child: Text(L10n.get('backButton')),
                       ),
                     ),
                   if (_currentPage > 0) const SizedBox(width: 16),
@@ -140,7 +141,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     child: ElevatedButton(
                       onPressed: _nextPage,
                       child: Text(
-                        _currentPage == _pages.length - 1 ? '始める' : '次へ',
+                        _currentPage == _pages.length - 1 ? L10n.get('getStartedButton') : L10n.get('nextButton'),
                       ),
                     ),
                   ),

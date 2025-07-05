@@ -752,7 +752,7 @@ class ApiService {
   // Stream AI feedback generation in real-time
   static Stream<Map<String, dynamic>> streamAiFeedback(
     String problemUid,
-    Uint8List canvasImageBytes, {
+    Uint8List? canvasImageBytes, {
     String? customMessage,
   }) async* {
     try {
@@ -771,55 +771,85 @@ class ApiService {
       // Add authorization header
       request.headers['Authorization'] = 'Bearer $token';
 
-      // Add canvas image file
-      request.files.add(
-        http.MultipartFile.fromBytes(
-          'images',
-          canvasImageBytes,
-          filename: 'canvas.png',
-          contentType: MediaType('image', 'png'),
-        ),
-      );
+      // Add canvas image file only if provided
+      if (canvasImageBytes != null && canvasImageBytes.isNotEmpty) {
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'images',
+            canvasImageBytes,
+            filename: 'canvas.png',
+            contentType: MediaType('image', 'png'),
+          ),
+        );
+        debugPrint('Including canvas image in streaming request');
+      } else {
+        debugPrint('Streaming text-only message without canvas image');
+      }
 
       // Add custom message if provided
       if (customMessage != null) {
         request.fields['customMessage'] = customMessage;
       }
 
+      debugPrint('Starting streaming request to: ${request.url}');
       final streamedResponse = await request.send();
 
+      debugPrint('Streaming response status: ${streamedResponse.statusCode}');
       if (streamedResponse.statusCode != 200) {
+        final responseBody = await streamedResponse.stream.bytesToString();
+        debugPrint('Streaming error response: $responseBody');
         yield {
           'type': 'error',
           'error': 'Failed to start streaming: ${streamedResponse.statusCode}',
+          'details': responseBody,
         };
         return;
       }
 
       // Parse Server-Sent Events stream
+      debugPrint('Starting to parse SSE stream...');
       await for (final chunk in streamedResponse.stream
           .transform(utf8.decoder)
           .transform(LineSplitter())) {
+        debugPrint('Received SSE chunk: $chunk');
         if (chunk.startsWith('data: ')) {
           final jsonData = chunk.substring(6); // Remove 'data: ' prefix
           if (jsonData.trim().isNotEmpty) {
             try {
               final data = json.decode(jsonData);
+              debugPrint('Parsed SSE data: $data');
               yield data;
             } catch (e) {
               debugPrint('Error parsing SSE data: $e');
+              debugPrint('Raw JSON data: $jsonData');
               yield {
                 'type': 'error',
                 'error': 'Failed to parse streaming data',
+                'rawData': jsonData,
               };
             }
           }
+        } else if (chunk.trim().isNotEmpty) {
+          debugPrint('Non-SSE chunk received: $chunk');
         }
       }
+      debugPrint('SSE stream ended');
     } catch (e) {
       debugPrint('Error in streaming AI feedback: $e');
       yield {'type': 'error', 'error': 'Failed to stream AI feedback: $e'};
     }
+  }
+
+  // Stream AI feedback for text-only messages (no canvas image required)
+  static Stream<Map<String, dynamic>> streamTextMessage(
+    String problemUid,
+    String message,
+  ) async* {
+    yield* streamAiFeedback(
+      problemUid,
+      null, // No canvas image
+      customMessage: message,
+    );
   }
 
   static Future<List<AiFeedback>?> getProblemFeedbacks(

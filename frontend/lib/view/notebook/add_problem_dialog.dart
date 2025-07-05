@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:ai_math_helper/services/image_import_service.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import '../../l10n/localization_helper.dart';
 
 class AddProblemDialog extends StatefulWidget {
   final Function(List<String> tags, XFile? imageFile) onProblemAdded;
@@ -43,7 +44,7 @@ class _AddProblemDialogState extends State<AddProblemDialog> {
     final isEditing = widget.problem != null;
 
     return AlertDialog(
-      title: Text(isEditing ? 'Edit Problem' : 'Add New Problem'),
+      title: Text(isEditing ? L10n.get('editProblemTitle') : L10n.get('addNewProblemTitle')),
       content: Form(
         key: _formKey,
         child: SizedBox(
@@ -53,7 +54,7 @@ class _AddProblemDialogState extends State<AddProblemDialog> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Tags',
+                L10n.get('tagsLabel'),
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 8),
@@ -62,8 +63,8 @@ class _AddProblemDialogState extends State<AddProblemDialog> {
                   Expanded(
                     child: TextFormField(
                       controller: _tagController,
-                      decoration: const InputDecoration(
-                        hintText: 'Add a tag (e.g., algebra)',
+                      decoration: InputDecoration(
+                        hintText: L10n.get('addTagHint'),
                         border: OutlineInputBorder(),
                       ),
                       onFieldSubmitted: _addTag,
@@ -97,14 +98,14 @@ class _AddProblemDialogState extends State<AddProblemDialog> {
                 const SizedBox(height: 8),
               ],
               Text(
-                'Common tags: algebra, geometry, calculus, trigonometry',
+                L10n.get('commonTagsHint'),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
               const SizedBox(height: 16),
               Text(
-                'Images',
+                L10n.get('imagesLabel'),
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 8),
@@ -114,7 +115,7 @@ class _AddProblemDialogState extends State<AddProblemDialog> {
                     child: OutlinedButton.icon(
                       onPressed: _importFromCamera,
                       icon: const Icon(Icons.camera_alt),
-                      label: const Text('Camera'),
+                      label: Text(L10n.get('cameraButton')),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -122,7 +123,7 @@ class _AddProblemDialogState extends State<AddProblemDialog> {
                     child: OutlinedButton.icon(
                       onPressed: _importFromGallery,
                       icon: const Icon(Icons.photo_library),
-                      label: const Text('Gallery'),
+                      label: Text(L10n.get('galleryButton')),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -130,7 +131,7 @@ class _AddProblemDialogState extends State<AddProblemDialog> {
                     child: OutlinedButton.icon(
                       onPressed: _scanDocument,
                       icon: const Icon(Icons.document_scanner),
-                      label: const Text('Scanner'),
+                      label: Text(L10n.get('scannerButton')),
                     ),
                   ),
                 ],
@@ -187,11 +188,11 @@ class _AddProblemDialogState extends State<AddProblemDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(L10n.get('cancelButton')),
         ),
         FilledButton(
           onPressed: _saveProblem,
-          child: Text(isEditing ? 'Update' : 'Add'),
+          child: Text(isEditing ? L10n.get('update') : L10n.get('add')),
         ),
       ],
     );

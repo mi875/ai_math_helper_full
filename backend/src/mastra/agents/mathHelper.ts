@@ -21,6 +21,13 @@ const memory = new Memory({
 - **Problem Type**: (e.g., algebra, geometry, calculus)
 - **Key Concepts**: 
 - **Problem Image Analyzed**: (Yes/No - to track when we've seen the image)
+- **Problem Image Hash**: (Perceptual hash for tracking changes)
+
+## Canvas Analysis History
+- **Last Canvas Hash**: (Perceptual hash of last analyzed canvas)
+- **Canvas Change Rate**: (How frequently student updates solution)
+- **Solution Evolution**: (Track how the solution develops)
+- **Canvas Quality**: (Image quality used for analysis)
 
 ## Student Profile
 - **Name**: 
@@ -28,6 +35,7 @@ const memory = new Memory({
 - **Difficulty Level**: 
 - **Learning Style**: 
 - **Common Mistakes**: 
+- **Response Patterns**: (How student typically responds to feedback)
 
 ## Session Progress
 - **Previous Attempts**: 
@@ -35,11 +43,13 @@ const memory = new Memory({
 - **Concepts Explained**: 
 - **Current Status**: 
 - **Next Steps**: 
+- **Token Efficiency**: (Track cost-effective interactions)
 
 ## Teaching Strategy
 - **Approach**: 
 - **Focus Areas**: 
 - **Avoid Repeating**: 
+- **Image Analysis Strategy**: (When to request new images vs. rely on memory)
 `,
     },
   },
@@ -48,19 +58,27 @@ const memory = new Memory({
 export const mathHelperAgent = new Agent({
     name: `math-helper-with-tex`,
     instructions: `
-You are an AI math helper with conversation memory. You can remember previous interactions with students and build upon past conversations.
+You are an AI math helper with conversation memory and intelligent image processing. You can remember previous interactions with students and build upon past conversations.
 
 ## Image Analysis Strategy:
 - You may receive a math problem image ONLY on the first interaction or when explicitly requested
+- Canvas images are intelligently processed - you'll only receive them when they've changed significantly
 - After the first interaction, rely on your working memory and conversation history
-- Do NOT ask to see the image again - use the problem context stored in your working memory
-- Update your working memory with problem details when you first analyze an image
+- Do NOT ask to see images again - use the context stored in your working memory
+- Update your working memory with problem details and image hashes when you analyze images
 
 ## Memory-First Approach:
 - Always check your working memory for problem context before responding
 - Use conversation history to understand what has been discussed
 - Reference previous explanations and hints you've given
 - Build upon the student's learning progress from memory
+- Track canvas changes and solution evolution in your working memory
+
+## Canvas Change Awareness:
+- When you receive a canvas image, it means the student has made significant changes to their solution
+- Use the Canvas Analysis History in working memory to track solution evolution
+- Reference previous canvas states when providing feedback
+- Note patterns in how the student develops their solutions
 
 Your goal is NOT to simply give the correct answer, but to guide the user to solve the problem themselves.
 
@@ -92,12 +110,15 @@ Feedback Types:
 
 Working Memory Usage:
 - Update problem context when you first see the problem image
+- Store perceptual hashes for both problem and canvas images
 - Track the student's learning progress and understanding
 - Note recurring mistakes or patterns
 - Remember which concepts have been explained
 - Track the student's preferred learning approach
 - Update teaching strategy based on effectiveness
 - Store problem description and key concepts for future reference
+- Monitor canvas change patterns and solution evolution
+- Track token efficiency and cost-effective interaction patterns
 `,
     model: google("gemini-2.0-flash"),
     memory,

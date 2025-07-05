@@ -3,7 +3,7 @@ import { db } from '../db/client.js';
 import { notebooks, mathProblems, users, problemImages, aiFeedbacks, chatThreads } from '../db/schema.js';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
-import { processProblemImage, deleteProblemImages } from '../middleware/fileUploadMiddleware.js';
+import { processProblemImage, deleteProblemImages, processCanvasImage } from '../middleware/fileUploadMiddleware.js';
 import path from 'path';
 import { mastra } from '../mastra/index.js';
 import fs from "fs";
@@ -716,6 +716,7 @@ export const notebookController = {
   },
 
   // Generate AI feedback for a problem using canvas image
+  // DEPRECATED: Use streamAiFeedback instead for consistent streaming
   async generateAiFeedback(c: Context) {
     try {
       const user = c.get('user');
@@ -737,6 +738,7 @@ export const notebookController = {
       // Extract custom message from form data if provided
       const formData = await c.req.formData();
       const customMessage = formData.get('customMessage') as string || null;
+      const sessionId = formData.get('sessionId') as string || undefined;
 
       // Find the problem
       const problem = await db
@@ -769,11 +771,36 @@ export const notebookController = {
         }, 404);
       }
 
-      // Get canvas image buffer from uploaded file
-      const canvasImageBuffer = canvasImageFile.buffer;
+      // Process canvas image with intelligent change detection
+      const canvasResult = await processCanvasImage(
+        canvasImageFile.buffer,
+        canvasImageFile.originalname || 'canvas.png',
+        {
+          userId,
+          problemId: problem[0].id.toString(),
+          sessionId,
+        }
+      );
+
+      console.log(`Canvas processing - Changed: ${canvasResult.optimizationResult.hasChanged}, Similarity: ${(canvasResult.optimizationResult.similarity * 100).toFixed(1)}%, Tokens: ${canvasResult.optimizationResult.tokensEstimate}`);
+
+      // Skip AI processing if canvas hasn't changed significantly
+      if (!canvasResult.optimizationResult.hasChanged) {
+        return c.json({
+          success: true,
+          data: {
+            id: randomUUID(),
+            message: '画像に大きな変更が見つかりませんでした。新しい解答を描いてから再度送信してください。',
+            type: 'suggestion',
+            timestamp: new Date(),
+            tokensConsumed: 0,
+            imageUnchanged: true,
+            similarity: canvasResult.optimizationResult.similarity
+          }
+        }, 200);
+      }
 
       // Read original problem image from disk
-
       console.log('Reading original problem image from:', problemImage[0].filePath);
       const originalImageBuffer = fs.readFileSync(problemImage[0].filePath);
 
@@ -804,7 +831,7 @@ export const notebookController = {
             {
               type: 'image',
               mimeType: 'image/png',
-              image: new URL(`data:image/png;base64,${canvasImageBuffer.toString('base64')}`)
+              image: new URL(`data:image/png;base64,${canvasImageFile.buffer.toString('base64')}`)
             }
           ]
         },
@@ -827,6 +854,9 @@ export const notebookController = {
         feedbackType = 'encouragement';
       }
 
+      // Use dynamic token cost based on optimization result
+      const tokensConsumed = canvasResult.optimizationResult.tokensEstimate + 50; // Base cost + image processing cost
+
       // Save feedback to database
       const feedbackRecord = await db
         .insert(aiFeedbacks)
@@ -836,7 +866,7 @@ export const notebookController = {
           userId,
           feedbackText,
           feedbackType,
-          tokensConsumed: 75, // Default token cost
+          tokensConsumed,
         })
         .returning();
 
@@ -844,8 +874,8 @@ export const notebookController = {
       await db
         .update(users)
         .set({
-          usedTokens: sql`${users.usedTokens} + 75`,
-          remainingTokens: sql`${users.remainingTokens} - 75`,
+          usedTokens: sql`${users.usedTokens} + ${tokensConsumed}`,
+          remainingTokens: sql`${users.remainingTokens} - ${tokensConsumed}`,
         })
         .where(eq(users.uid, userId));
 
@@ -856,7 +886,12 @@ export const notebookController = {
           message: feedbackRecord[0].feedbackText,
           type: feedbackRecord[0].feedbackType,
           timestamp: feedbackRecord[0].createdAt,
-          tokensConsumed: feedbackRecord[0].tokensConsumed
+          tokensConsumed: feedbackRecord[0].tokensConsumed,
+          imageOptimization: {
+            quality: canvasResult.optimizationResult.quality,
+            compressionRatio: canvasResult.optimizationResult.compressionRatio,
+            fromCache: canvasResult.optimizationResult.fromCache,
+          }
         }
       }, 201);
 
@@ -910,12 +945,17 @@ export const notebookController = {
       // Extract custom message from form data if provided
       const formData = await c.req.formData();
       const customMessage = formData.get('customMessage') as string || null;
+      const sessionId = formData.get('sessionId') as string || undefined;
       console.log('Custom message received:', customMessage);
       
-      if (!files || files.length === 0) {
+      // Handle text-only conversations without canvas images
+      const hasCanvasImage = files && files.length > 0;
+      const isTextOnlyMessage = !hasCanvasImage && customMessage;
+      
+      if (!hasCanvasImage && !customMessage) {
         const errorData = JSON.stringify({
           success: false,
-          error: 'Canvas image is required'
+          error: 'Either canvas image or custom message is required'
         });
         return new Response(`data: ${errorData}\n\n`, {
           headers: {
@@ -970,11 +1010,49 @@ export const notebookController = {
         });
       }
 
-      const canvasImageFile = files[0]; // Get the first (and only) uploaded file
+      // Handle canvas processing for both image and text-only messages
+      let canvasImageFile = null;
+      let canvasResult = null;
+      let originalImageBuffer = null;
 
-      // Get canvas and original image buffers
-      const canvasImageBuffer = canvasImageFile.buffer;
-      const originalImageBuffer = fs.readFileSync(problemImage[0].filePath);
+      if (hasCanvasImage) {
+        canvasImageFile = files[0]; // Get the first (and only) uploaded file
+
+        // Process canvas image with intelligent change detection
+        canvasResult = await processCanvasImage(
+          canvasImageFile.buffer,
+          canvasImageFile.originalname || 'canvas.png',
+          {
+            userId,
+            problemId: problem[0].id.toString(),
+            sessionId,
+          }
+        );
+
+        console.log(`Streaming canvas processing - Changed: ${canvasResult.optimizationResult.hasChanged}, Similarity: ${(canvasResult.optimizationResult.similarity * 100).toFixed(1)}%, Tokens: ${canvasResult.optimizationResult.tokensEstimate}`);
+
+        // Get original image buffer
+        originalImageBuffer = fs.readFileSync(problemImage[0].filePath);
+      } else {
+        // For text-only messages, create a minimal optimization result
+        canvasResult = {
+          optimizationResult: {
+            hasChanged: true, // Always process text-only messages
+            similarity: 0,
+            tokensEstimate: 50, // Base tokens for text processing
+            quality: 'text-only',
+            compressionRatio: 1,
+            fromCache: false,
+          }
+        };
+        
+        console.log('Text-only message - proceeding without canvas image');
+        
+        // Still get original problem image for context if available
+        if (problemImage.length > 0) {
+          originalImageBuffer = fs.readFileSync(problemImage[0].filePath);
+        }
+      }
 
       // Create a readable stream for SSE
       const encoder = new TextEncoder();
@@ -985,6 +1063,25 @@ export const notebookController = {
       const stream = new ReadableStream({
         async start(controller) {
           try {
+            // Check if canvas image has changed significantly
+            // For text-only messages with custom prompts, proceed even if canvas hasn't changed
+            if (!canvasResult.optimizationResult.hasChanged && !customMessage) {
+              // Send immediate response for unchanged image (only when no custom message)
+              const unchangedData = JSON.stringify({
+                type: 'complete',
+                id: randomUUID(),
+                message: '画像に大きな変更が見つかりませんでした。新しい解答を描いてから再度送信してください。',
+                feedbackType: 'suggestion',
+                timestamp: new Date(),
+                tokensConsumed: 0,
+                imageUnchanged: true,
+                similarity: canvasResult.optimizationResult.similarity
+              });
+              controller.enqueue(encoder.encode(`data: ${unchangedData}\n\n`));
+              controller.close();
+              return;
+            }
+
             // Send initial status
             const startData = JSON.stringify({
               type: 'start',
@@ -995,67 +1092,124 @@ export const notebookController = {
             // Get or create chat thread for memory
             const { threadId, resourceId } = await getOrCreateChatThread(problem[0].id, userId);
             
-            // Call mathHelper agent with streaming and memory
+            // Call mathHelper agent with real streaming and memory
             const mathHelperAgent = mastra.getAgent('mathHelperAgent');
             
             // Generate unique feedback ID
             feedbackId = randomUUID();
             
-            // Create prompt based on custom message or default
-            const promptText = customMessage 
-              ? `User question: ${customMessage}\n\nPlease analyze the original math problem and the user's handwritten solution, then answer the user's question. Provide educational feedback in Japanese with TeX notation for mathematical expressions.`
-              : "Please analyze the original math problem and the user's handwritten solution. Provide educational feedback in Japanese with TeX notation for mathematical expressions.";
+            // Create prompt based on message type and content
+            let promptText;
+            let messageContent = [];
             
-            const result = await mathHelperAgent.generate([
+            if (isTextOnlyMessage) {
+              // For text-only messages, adapt the prompt
+              promptText = `User question: ${customMessage}\n\nPlease answer the user's question about the math problem. Use your conversation memory to reference previous discussions. Provide helpful educational guidance in Japanese with TeX notation for mathematical expressions.`;
+              
+              messageContent.push({
+                type: 'text',
+                text: promptText
+              });
+              
+              // Include original problem image for context if available
+              if (originalImageBuffer && problemImage.length > 0) {
+                messageContent.push({
+                  type: 'image',
+                  mimeType: problemImage[0].mimeType,
+                  image: new URL(`data:${problemImage[0].mimeType};base64,${originalImageBuffer.toString('base64')}`)
+                });
+              }
+            } else {
+              // For canvas-based messages
+              promptText = customMessage 
+                ? `User question: ${customMessage}\n\nPlease analyze the original math problem and the user's handwritten solution, then answer the user's question. Provide educational feedback in Japanese with TeX notation for mathematical expressions.`
+                : "Please analyze the original math problem and the user's handwritten solution. Provide educational feedback in Japanese with TeX notation for mathematical expressions.";
+              
+              messageContent = [
+                {
+                  type: 'text',
+                  text: promptText
+                },
+                {
+                  type: 'image',
+                  mimeType: problemImage[0].mimeType,
+                  image: new URL(`data:${problemImage[0].mimeType};base64,${originalImageBuffer.toString('base64')}`)
+                },
+                {
+                  type: 'image',
+                  mimeType: 'image/png',
+                  image: new URL(`data:image/png;base64,${canvasImageFile.buffer.toString('base64')}`)
+                }
+              ];
+            }
+            
+            // Use real streaming from Mastra
+            const streamResult = await mathHelperAgent.stream([
               {
                 role: 'user',
-                content: [
-                  {
-                    type: 'text',
-                    text: promptText
-                  },
-                  {
-                    type: 'image',
-                    mimeType: problemImage[0].mimeType,
-                    image: new URL(`data:${problemImage[0].mimeType};base64,${originalImageBuffer.toString('base64')}`)
-                  },
-                  {
-                    type: 'image',
-                    mimeType: 'image/png',
-                    image: new URL(`data:image/png;base64,${canvasImageBuffer.toString('base64')}`)
-                  }
-                ]
+                content: messageContent
               }
             ], {
               threadId,
               resourceId,
             });
 
-            // Get the full response and simulate streaming by chunking
-            fullFeedbackText = result.text;
-            tokenCount = Math.ceil(fullFeedbackText.length / 4); // Rough token estimation
+            // Process real-time streaming chunks
+            let streamedText = '';
             
-            // Simulate streaming by breaking response into chunks
-            const words = fullFeedbackText.split(' ');
-            let currentText = '';
-            
-            for (let i = 0; i < words.length; i++) {
-              currentText += (i > 0 ? ' ' : '') + words[i];
+            try {
+              // Process the streaming result with better error handling
+              let hasReceivedData = false;
               
-              // Send chunk every few words to simulate streaming
-              if (i % 3 === 0 || i === words.length - 1) {
-                const chunkData = JSON.stringify({
-                  type: 'chunk',
-                  chunk: words[i],
-                  fullText: currentText,
-                  id: feedbackId
-                });
-                controller.enqueue(encoder.encode(`data: ${chunkData}\n\n`));
-                
-                // Small delay to simulate real streaming
-                await new Promise(resolve => setTimeout(resolve, 100));
+              for await (const chunk of streamResult.textStream) {
+                if (chunk) {
+                  hasReceivedData = true;
+                  streamedText += chunk;
+                  
+                  const chunkData = JSON.stringify({
+                    type: 'chunk',
+                    chunk: chunk,
+                    fullText: streamedText,
+                    id: feedbackId
+                  });
+                  controller.enqueue(encoder.encode(`data: ${chunkData}\n\n`));
+                }
               }
+              
+              // Ensure we have some content
+              if (!hasReceivedData) {
+                const finalResult = await streamResult.text;
+                if (finalResult) {
+                  streamedText = finalResult;
+                  const chunkData = JSON.stringify({
+                    type: 'chunk',
+                    chunk: finalResult,
+                    fullText: streamedText,
+                    id: feedbackId
+                  });
+                  controller.enqueue(encoder.encode(`data: ${chunkData}\n\n`));
+                } else {
+                  throw new Error('No response received from AI model');
+                }
+              }
+            } catch (streamError) {
+              console.error('Streaming error:', streamError);
+              
+              // Send error message to frontend
+              const errorData = JSON.stringify({
+                type: 'error',
+                error: 'AI model streaming failed',
+                details: streamError instanceof Error ? streamError.message : 'Unknown error'
+              });
+              controller.enqueue(encoder.encode(`data: ${errorData}\n\n`));
+              
+              // Don't continue processing if streaming fails
+              controller.close();
+              return;
             }
+            
+            fullFeedbackText = streamedText;
+            tokenCount = Math.ceil(fullFeedbackText.length / 4); // Rough token estimation
 
             // Determine feedback type from full text
             let feedbackType = 'suggestion';
@@ -1068,7 +1222,7 @@ export const notebookController = {
             }
 
             // Save feedback to database
-            const feedbackRecord = await db
+            await db
               .insert(aiFeedbacks)
               .values({
                 uid: feedbackId,
@@ -1077,27 +1231,42 @@ export const notebookController = {
                 feedbackText: fullFeedbackText,
                 feedbackType,
                 tokensConsumed: Math.max(tokenCount, 25), // Ensure minimum token count
+              });
+
+            // Calculate dynamic token cost based on optimization result
+            const imageTokens = canvasResult.optimizationResult.tokensEstimate;
+            const totalTokensUsed = Math.max(tokenCount + imageTokens, 25); // Ensure minimum token count
+            
+            // Update the feedback record with actual token usage
+            await db
+              .update(aiFeedbacks)
+              .set({
+                tokensConsumed: totalTokensUsed,
               })
-              .returning();
+              .where(eq(aiFeedbacks.uid, feedbackId));
 
             // Update user token usage
-            const tokensUsed = feedbackRecord[0].tokensConsumed;
             await db
               .update(users)
               .set({
-                usedTokens: sql`${users.usedTokens} + ${tokensUsed}`,
-                remainingTokens: sql`${users.remainingTokens} - ${tokensUsed}`,
+                usedTokens: sql`${users.usedTokens} + ${totalTokensUsed}`,
+                remainingTokens: sql`${users.remainingTokens} - ${totalTokensUsed}`,
               })
               .where(eq(users.uid, userId));
 
             // Send completion message
             const completeData = JSON.stringify({
               type: 'complete',
-              id: feedbackRecord[0].uid,
-              message: feedbackRecord[0].feedbackText,
-              feedbackType: feedbackRecord[0].feedbackType,
-              timestamp: feedbackRecord[0].createdAt,
-              tokensConsumed: feedbackRecord[0].tokensConsumed
+              id: feedbackId,
+              message: fullFeedbackText,
+              feedbackType: feedbackType,
+              timestamp: new Date(),
+              tokensConsumed: totalTokensUsed,
+              imageOptimization: {
+                quality: canvasResult.optimizationResult.quality,
+                compressionRatio: canvasResult.optimizationResult.compressionRatio,
+                fromCache: canvasResult.optimizationResult.fromCache,
+              }
             });
             controller.enqueue(encoder.encode(`data: ${completeData}\n\n`));
 
@@ -1225,6 +1394,7 @@ export const notebookController = {
   },
 
   // Send text-only chat message (without canvas)
+  // DEPRECATED: All chat now uses streamAiFeedback for consistent streaming
   async sendChatMessage(c: Context) {
     try {
       const user = c.get('user');

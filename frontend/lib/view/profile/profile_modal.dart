@@ -4,6 +4,7 @@ import 'package:ai_math_helper/widgets/profile_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../l10n/localization_helper.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -79,7 +80,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Profile',
+                  L10n.get('profileTitle'),
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -89,7 +90,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     if (_isEditing)
                       TextButton(
                         onPressed: _saveProfile,
-                        child: const Text('Save'),
+                        child: Text(L10n.get('save')),
                       )
                     else
                       IconButton(
@@ -147,7 +148,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                'Display Name',
+                                L10n.get('displayNameLabel'),
                                 style: Theme.of(context).textTheme.titleMedium
                                     ?.copyWith(fontWeight: FontWeight.bold),
                               ),
@@ -157,8 +158,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           if (_isEditing)
                             TextField(
                               controller: _displayNameController,
-                              decoration: const InputDecoration(
-                                hintText: 'Enter your display name',
+                              decoration: InputDecoration(
+                                hintText: L10n.get('enterDisplayNameHint'),
                                 border: OutlineInputBorder(),
                               ),
                             )
@@ -179,7 +180,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               ),
                               child: Text(
                                 _displayNameController.text.isEmpty
-                                    ? 'No display name set'
+                                    ? L10n.get('noDisplayNameSet')
                                     : _displayNameController.text,
                                 style: Theme.of(context).textTheme.bodyLarge,
                               ),
@@ -206,7 +207,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                'Grade Level',
+                                L10n.get('gradeLevelLabel'),
                                 style: Theme.of(context).textTheme.titleMedium
                                     ?.copyWith(fontWeight: FontWeight.bold),
                               ),
@@ -216,9 +217,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           if (_isEditing)
                             DropdownButtonFormField<String>(
                               value: _selectedGradeKey,
-                              decoration: const InputDecoration(
+                              decoration: InputDecoration(
                                 border: OutlineInputBorder(),
-                                hintText: 'Select your grade level',
+                                hintText: L10n.get('selectGradeLevelHint'),
                               ),
                               items:
                                   profileState.gradeOptions
@@ -263,7 +264,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               child: Text(
                                 _selectedGradeKey == null ||
                                         _gradeController.text.isEmpty
-                                    ? 'No grade selected'
+                                    ? L10n.get('noGradeSelected')
                                     : _gradeController.text,
                                 style: Theme.of(
                                   context,
@@ -300,7 +301,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                'Email',
+                                L10n.get('emailLabel'),
                                 style: Theme.of(context).textTheme.titleMedium
                                     ?.copyWith(fontWeight: FontWeight.bold),
                               ),
@@ -326,7 +327,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
-                              user?.email ?? 'No email',
+                              user?.email ?? L10n.get('noEmailText'),
                               style: Theme.of(
                                 context,
                               ).textTheme.bodyLarge?.copyWith(
@@ -360,7 +361,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
-                                  'Token Balance',
+                                  L10n.get('tokenBalanceLabel'),
                                   style: Theme.of(context).textTheme.titleMedium
                                       ?.copyWith(fontWeight: FontWeight.bold),
                                 ),
@@ -371,7 +372,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  'Remaining:',
+                                  L10n.get('remainingLabel'),
                                   style: Theme.of(context).textTheme.bodyMedium,
                                 ),
                                 Text(
@@ -411,7 +412,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         _showSignOutDialog();
                       },
                       icon: const Icon(Icons.logout),
-                      label: const Text('Sign Out'),
+                      label: Text(L10n.get('signOutButton')),
                       style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
@@ -446,8 +447,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Profile updated successfully!'),
+          SnackBar(
+            content: Text(L10n.get('profileUpdatedSuccess')),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -458,7 +459,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           SnackBar(
             content: Text(
               ref.read(profileModelProvider).errorMessage ??
-                  'Failed to update profile',
+                  L10n.get('failedToUpdateProfileError'),
             ),
             behavior: SnackBarBehavior.floating,
             backgroundColor: Colors.red,
@@ -478,7 +479,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               children: [
                 ListTile(
                   leading: const Icon(Icons.camera_alt),
-                  title: const Text('Take Photo'),
+                  title: Text(L10n.get('takePhotoOption')),
                   onTap: () {
                     Navigator.pop(context);
                     _pickImage(ImageSource.camera);
@@ -486,7 +487,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ),
                 ListTile(
                   leading: const Icon(Icons.photo_library),
-                  title: const Text('Choose from Gallery'),
+                  title: Text(L10n.get('chooseFromGalleryOption')),
                   onTap: () {
                     Navigator.pop(context);
                     _pickImage(ImageSource.gallery);
@@ -496,8 +497,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     null)
                   ListTile(
                     leading: const Icon(Icons.delete, color: Colors.red),
-                    title: const Text(
-                      'Remove Photo',
+                    title: Text(
+                      L10n.get('removePhotoOption'),
                       style: TextStyle(color: Colors.red),
                     ),
                     onTap: () {
@@ -527,8 +528,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
         if (success && mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Profile image updated successfully!'),
+            SnackBar(
+              content: Text(L10n.get('profileImageUpdatedSuccess')),
               behavior: SnackBarBehavior.floating,
             ),
           );
@@ -537,7 +538,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             SnackBar(
               content: Text(
                 ref.read(profileModelProvider).errorMessage ??
-                    'Failed to update profile image',
+                    L10n.get('failedToUpdateProfileImageError'),
               ),
               behavior: SnackBarBehavior.floating,
               backgroundColor: Colors.red,
@@ -549,7 +550,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
+            content: Text('${L10n.get('errorPrefix')}$e'),
             behavior: SnackBarBehavior.floating,
             backgroundColor: Colors.red,
           ),
@@ -564,8 +565,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Profile image removed successfully!'),
+        SnackBar(
+          content: Text(L10n.get('profileImageRemovedSuccess')),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -574,7 +575,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         SnackBar(
           content: Text(
             ref.read(profileModelProvider).errorMessage ??
-                'Failed to remove profile image',
+                L10n.get('failedToRemoveProfileImageError'),
           ),
           behavior: SnackBarBehavior.floating,
           backgroundColor: Colors.red,
@@ -588,14 +589,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Sign Out'),
-          content: const Text('Are you sure you want to sign out?'),
+          title: Text(L10n.get('signOutButton')),
+          content: Text(L10n.get('signOutDialogContent')),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: const Text('Cancel'),
+              child: Text(L10n.get('cancelButton')),
             ),
             FilledButton(
               onPressed: () {
@@ -603,7 +604,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 Navigator.of(context).pop(); // Close the profile modal
                 ref.read(authModelProvider.notifier).signOut();
               },
-              child: const Text('Sign Out'),
+              child: Text(L10n.get('signOutButton')),
             ),
           ],
         );

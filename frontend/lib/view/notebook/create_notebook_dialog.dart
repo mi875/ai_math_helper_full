@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/localization_helper.dart';
 
 class CreateNotebookDialog extends StatefulWidget {
   final Function(String title, String? description, String color) onNotebookCreated;
@@ -21,12 +22,12 @@ class _CreateNotebookDialogState extends State<CreateNotebookDialog> {
   String _selectedColor = 'blue';
 
   final List<Map<String, dynamic>> _availableColors = [
-    {'name': 'blue', 'color': Colors.blue, 'label': 'Blue'},
-    {'name': 'green', 'color': Colors.green, 'label': 'Green'},
-    {'name': 'red', 'color': Colors.red, 'label': 'Red'},
-    {'name': 'orange', 'color': Colors.orange, 'label': 'Orange'},
-    {'name': 'purple', 'color': Colors.purple, 'label': 'Purple'},
-    {'name': 'teal', 'color': Colors.teal, 'label': 'Teal'},
+    {'name': 'blue', 'color': Colors.blue, 'label': L10n.get('colorBlue')},
+    {'name': 'green', 'color': Colors.green, 'label': L10n.get('colorGreen')},
+    {'name': 'red', 'color': Colors.red, 'label': L10n.get('colorRed')},
+    {'name': 'orange', 'color': Colors.orange, 'label': L10n.get('colorOrange')},
+    {'name': 'purple', 'color': Colors.purple, 'label': L10n.get('colorPurple')},
+    {'name': 'teal', 'color': Colors.teal, 'label': L10n.get('colorTeal')},
   ];
 
   @override
@@ -51,7 +52,7 @@ class _CreateNotebookDialogState extends State<CreateNotebookDialog> {
     final isEditing = widget.notebook != null;
 
     return AlertDialog(
-      title: Text(isEditing ? 'Edit Notebook' : 'Create New Notebook'),
+      title: Text(isEditing ? L10n.get('editNotebookTitle') : L10n.get('createNewNotebookTitle')),
       content: Form(
         key: _formKey,
         child: SizedBox(
@@ -63,14 +64,14 @@ class _CreateNotebookDialogState extends State<CreateNotebookDialog> {
               children: [
               TextFormField(
                 controller: _titleController,
-                decoration: const InputDecoration(
-                  labelText: 'Notebook Title',
-                  hintText: 'e.g., Algebra Basics',
+                decoration: InputDecoration(
+                  labelText: L10n.get('notebookTitleLabel'),
+                  hintText: L10n.get('notebookTitleHint'),
                   border: OutlineInputBorder(),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'Please enter a title';
+                    return L10n.get('pleaseEnterTitle');
                   }
                   return null;
                 },
@@ -80,9 +81,9 @@ class _CreateNotebookDialogState extends State<CreateNotebookDialog> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _descriptionController,
-                decoration: const InputDecoration(
-                  labelText: 'Description (optional)',
-                  hintText: 'Brief description of this notebook',
+                decoration: InputDecoration(
+                  labelText: L10n.get('descriptionOptionalLabel'),
+                  hintText: L10n.get('descriptionHint'),
                   border: OutlineInputBorder(),
                 ),
                 maxLines: 3,
@@ -90,7 +91,7 @@ class _CreateNotebookDialogState extends State<CreateNotebookDialog> {
               ),
               const SizedBox(height: 24),
               Text(
-                'Cover Color',
+                L10n.get('coverColorLabel'),
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 12),
@@ -140,11 +141,11 @@ class _CreateNotebookDialogState extends State<CreateNotebookDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(L10n.get('cancelButton')),
         ),
         FilledButton(
           onPressed: _saveNotebook,
-          child: Text(isEditing ? 'Update' : 'Create'),
+          child: Text(isEditing ? L10n.get('update') : L10n.get('create')),
         ),
       ],
     );

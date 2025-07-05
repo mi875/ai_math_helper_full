@@ -5,6 +5,8 @@ import type { Context, Next } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import crypto from 'crypto';
 import heicConvert from 'heic-convert';
+import { processAndCacheImage, hasImageChanged } from '../utils/imageOptimizer.js';
+import { checkCanvasChange, storeCanvasHash } from '../utils/fallbackRedisCache.js';
 
 // File upload configuration
 const PROFILE_UPLOAD_DIR = './uploads/profile-images';
@@ -144,12 +146,27 @@ export async function processProfileImage(
   }
 }
 
-// Problem image processing function
+// Problem image processing function with intelligent optimization
 export async function processProblemImage(
   inputBuffer: Buffer,
   filename: string,
-  mimeType?: string
-): Promise<{ processedPath: string; metadata: any }> {
+  mimeType?: string,
+  options: {
+    userId?: string;
+    problemId?: string;
+    forceQuality?: 'high' | 'medium' | 'low';
+  } = {}
+): Promise<{ 
+  processedPath: string; 
+  metadata: any; 
+  optimizationResult: {
+    hash: string;
+    quality: string;
+    compressionRatio: number;
+    tokensEstimate: number;
+    fromCache: boolean;
+  };
+}> {
   await ensureUploadDir(PROBLEM_UPLOAD_DIR);
 
   const fileId = crypto.randomUUID();
@@ -170,23 +187,41 @@ export async function processProblemImage(
   const processedPath = path.join(PROBLEM_UPLOAD_DIR, `processed_${baseFilename}`);
 
   try {
-    // Get image metadata and validate dimensions
-    const metadata = await sharp(processBuffer).metadata();
+    // Create cache key for intelligent optimization
+    const cacheKey = options.userId && options.problemId 
+      ? `${options.userId}_${options.problemId}_${filename}`
+      : `${fileId}_${filename}`;
+    
+    // Use intelligent optimization system
+    const optimizationResult = await processAndCacheImage(processBuffer, cacheKey, {
+      forceQuality: options.forceQuality,
+      maxDimensions: MAX_DIMENSIONS,
+      targetTokens: 150, // Target token cost for problem images
+    });
+
+    // Save optimized image to disk
+    await fs.writeFile(processedPath, optimizationResult.buffer);
+
+    // Get metadata for return
+    const metadata = await sharp(optimizationResult.buffer).metadata();
     
     if (!metadata.width || !metadata.height) {
       throw new Error('Invalid image: Unable to determine dimensions');
     }
 
-    // Process main image (resize if too large, optimize)
-    await sharp(processBuffer)
-      .resize(MAX_DIMENSIONS.width, MAX_DIMENSIONS.height, {
-        fit: 'inside',
-        withoutEnlargement: true,
-      })
-      .jpeg({ quality: 85, progressive: true })
-      .toFile(processedPath);
+    console.log(`Problem image processed - Quality: ${optimizationResult.quality}, Compression: ${optimizationResult.compressionRatio.toFixed(2)}x, Tokens: ${optimizationResult.tokensEstimate}, FromCache: ${optimizationResult.fromCache}`);
 
-    return { processedPath, metadata };
+    return { 
+      processedPath, 
+      metadata,
+      optimizationResult: {
+        hash: optimizationResult.hash,
+        quality: optimizationResult.quality,
+        compressionRatio: optimizationResult.compressionRatio,
+        tokensEstimate: optimizationResult.tokensEstimate,
+        fromCache: optimizationResult.fromCache,
+      }
+    };
   } catch (error) {
     // Clean up files if processing failed
     try {
@@ -353,6 +388,135 @@ export async function deleteProblemImages(imagePaths: string[]): Promise<void> {
       console.error('Error deleting problem image:', error);
       // Don't throw error - image deletion failure shouldn't break the flow
     }
+  }
+}
+
+// Canvas image processing function with intelligent change detection
+export async function processCanvasImage(
+  inputBuffer: Buffer,
+  filename: string,
+  options: {
+    userId: string;
+    problemId: string;
+    sessionId?: string;
+    previousHash?: string;
+  }
+): Promise<{ 
+  processedPath: string | null;
+  metadata: any;
+  optimizationResult: {
+    hash: string;
+    quality: string;
+    compressionRatio: number;
+    tokensEstimate: number;
+    fromCache: boolean;
+    hasChanged: boolean;
+    similarity: number;
+  };
+}> {
+  await ensureUploadDir(PROBLEM_UPLOAD_DIR);
+
+  try {
+    // Try Redis first, fall back to in-memory cache
+    let changeResult;
+    try {
+      // Use Redis for enhanced caching if available
+      changeResult = await checkCanvasChange(
+        options.userId,
+        options.problemId,
+        options.sessionId || 'default',
+        inputBuffer,
+        0.85
+      );
+    } catch (redisError) {
+      console.warn('Redis unavailable, falling back to in-memory cache:', redisError);
+      // Fallback to in-memory cache
+      const cacheKey = `canvas_${options.userId}_${options.problemId}_${options.sessionId || 'default'}`;
+      changeResult = await hasImageChanged(inputBuffer, cacheKey, 0.85);
+    }
+    
+    let processedPath: string | null = null;
+    let optimizationResult: any;
+    
+    if (changeResult.hasChanged) {
+      console.log(`Canvas image changed - Similarity: ${(changeResult.similarity * 100).toFixed(1)}%`);
+      
+      // Process the changed image with high quality for math content
+      const cacheKey = `canvas_${options.userId}_${options.problemId}_${options.sessionId || 'default'}`;
+      optimizationResult = await processAndCacheImage(inputBuffer, cacheKey, {
+        forceQuality: 'high', // Canvas images typically contain handwritten math
+        maxDimensions: { width: 1024, height: 1024 },
+        targetTokens: 200, // Higher token allowance for canvas images
+      });
+      
+      // Save to disk if needed
+      const fileId = crypto.randomUUID();
+      const baseFilename = `canvas_${fileId}_${filename}`;
+      processedPath = path.join(PROBLEM_UPLOAD_DIR, `processed_${baseFilename}`);
+      
+      await fs.writeFile(processedPath, optimizationResult.buffer);
+      
+      // Store in Redis cache for future reference
+      try {
+        await storeCanvasHash(
+          options.userId,
+          options.problemId,
+          options.sessionId || 'default',
+          optimizationResult.buffer,
+          {
+            hash: optimizationResult.hash,
+            timestamp: Date.now(),
+            metadata: {
+              width: optimizationResult.metadata.width,
+              height: optimizationResult.metadata.height,
+              size: optimizationResult.buffer.length,
+              quality: optimizationResult.quality,
+              compressionRatio: optimizationResult.compressionRatio,
+            },
+            userId: options.userId,
+            problemId: options.problemId,
+            sessionId: options.sessionId,
+            tokensEstimate: optimizationResult.tokensEstimate,
+          }
+        );
+      } catch (redisError) {
+        console.warn('Failed to store in Redis cache:', redisError);
+      }
+      
+      console.log(`Canvas image processed - Quality: ${optimizationResult.quality}, Compression: ${optimizationResult.compressionRatio.toFixed(2)}x, Tokens: ${optimizationResult.tokensEstimate}`);
+    } else {
+      console.log(`Canvas image unchanged - Similarity: ${(changeResult.similarity * 100).toFixed(1)}%, skipping AI processing`);
+      
+      // Return cached optimization data
+      optimizationResult = {
+        hash: changeResult.newHash,
+        quality: 'high',
+        compressionRatio: 1.0,
+        tokensEstimate: 0, // No tokens consumed for unchanged images
+        fromCache: true,
+        buffer: inputBuffer,
+      };
+    }
+    
+    // Get metadata
+    const metadata = await sharp(inputBuffer).metadata();
+    
+    return { 
+      processedPath,
+      metadata,
+      optimizationResult: {
+        hash: optimizationResult.hash,
+        quality: optimizationResult.quality,
+        compressionRatio: optimizationResult.compressionRatio,
+        tokensEstimate: optimizationResult.tokensEstimate,
+        fromCache: optimizationResult.fromCache,
+        hasChanged: changeResult.hasChanged,
+        similarity: changeResult.similarity,
+      }
+    };
+  } catch (error) {
+    console.error('Error processing canvas image:', error);
+    throw error;
   }
 }
 
