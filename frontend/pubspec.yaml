@@ -61,6 +61,8 @@ dependencies:
   mime: ^1.0.6
   gpt_markdown: ^1.0.16
   flutter_math_fork: ^0.7.4
+  firebase_analytics: ^11.5.2
+  firebase_crashlytics: ^4.3.9
 
 dev_dependencies:
   flutter_test:
